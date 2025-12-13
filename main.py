@@ -15,14 +15,17 @@ class ProSigmaApp(ctk.CTk):
         
         # Configurações da janela principal
         self.title("Pro Sigma - Análise Estatística Six Sigma")
-        self.geometry("1200x700")
         
         # Configuração de tema
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
         
-        # Centraliza a janela
-        self.center_window()
+        # Otimizações de performance
+        self.resizable(True, True)
+        self.minsize(1000, 600)  # Tamanho mínimo para evitar problemas de layout
+        
+        # Inicia maximizado para melhor experiência
+        self.state('zoomed')  # Windows
         
         # Gerenciador de licenças
         self.license_manager = LicenseManager()
@@ -32,7 +35,7 @@ class ProSigmaApp(ctk.CTk):
         self.check_license()
     
     def center_window(self):
-        """Centraliza a janela na tela"""
+        """Centraliza a janela na tela (não usado quando maximizado)"""
         self.update_idletasks()
         width = 1200
         height = 700
@@ -68,6 +71,9 @@ class ProSigmaApp(ctk.CTk):
     
     def load_home_page(self):
         """Carrega a página inicial"""
+        # Desabilita updates durante reconstrução para melhor performance
+        self.update_idletasks()
+        
         # Limpa janela
         for widget in self.winfo_children():
             widget.destroy()
@@ -79,6 +85,9 @@ class ProSigmaApp(ctk.CTk):
             on_license_change=self.on_license_changed
         )
         home_page.pack(fill="both", expand=True)
+        
+        # Força atualização única após carregar
+        self.update_idletasks()
     
     def on_license_changed(self, new_license_data: dict):
         """

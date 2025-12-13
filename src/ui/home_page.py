@@ -8,6 +8,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Optional
 from src.utils.file_history import FileHistory
+from src.utils.performance_utils import resize_optimizer, optimize_frame_resize
 
 
 class HomePage(ctk.CTkFrame):
@@ -31,7 +32,14 @@ class HomePage(ctk.CTkFrame):
         self.on_license_change = on_license_change
         self.file_history = FileHistory()
         
+        # Otimizações de performance
+        self._is_resizing = False
+        self._resize_after_id = None
+        
         self.create_widgets()
+        
+        # Bind para otimizar redimensionamento
+        self.bind('<Configure>', self._on_configure)
     
     def create_widgets(self):
         """Cria os widgets da interface"""
@@ -41,9 +49,9 @@ class HomePage(ctk.CTkFrame):
         main_container.pack(fill="both", expand=True)
         
         # ===== MENU LATERAL =====
-        self.sidebar = ctk.CTkFrame(main_container, width=200, corner_radius=0)
-        self.sidebar.pack(side="left", fill="y")
-        self.sidebar.pack_propagate(False)
+        self.sidebar = ctk.CTkFrame(main_container, width=220, corner_radius=0)
+        self.sidebar.pack(side="left", fill="y", padx=0, pady=0)
+        self.sidebar.pack_propagate(False)  # Mant\u00e9m largura fixa
         
 
         # Logo/Título no sidebar
@@ -282,12 +290,17 @@ class HomePage(ctk.CTkFrame):
         )
         count_badge.pack(side="left", padx=(10, 0))
         
-        # Grid de ferramentas
+        # Grid de ferramentas (otimizado para performance)
         self.tools_scroll = ctk.CTkScrollableFrame(
             tools_container,
-            fg_color="transparent"
+            fg_color="transparent",
+            scrollbar_button_color="#2E86DE",
+            scrollbar_button_hover_color="#1E5BA8"
         )
         self.tools_scroll.pack(fill="both", expand=True)
+        
+        # Otimiza scrolling para melhor performance
+        self.tools_scroll._scrollbar.configure(width=12)
         
         # Cria botões das ferramentas
         self.create_tool_buttons()
@@ -858,3 +871,29 @@ class HomePage(ctk.CTkFrame):
             file_type: Tipo do arquivo (excel ou csv)
         """
         self.load_file(file_path, file_type)
+    
+    def _on_configure(self, event):
+        """
+        Handler otimizado para eventos de configuração (resize)
+        Usa debounce para evitar múltiplas reconstruções
+        """
+        # Ignora eventos que não são da própria janela
+        if event.widget != self:
+            return
+        
+        # Cancela timer anterior se existir
+        if self._resize_after_id:
+            self.after_cancel(self._resize_after_id)
+        
+        # Agenda atualização após 150ms de inatividade
+        self._resize_after_id = self.after(150, self._handle_resize)
+    
+    def _handle_resize(self):
+        """
+        Processa o redimensionamento de forma otimizada
+        """
+        self._is_resizing = False
+        self._resize_after_id = None
+        
+        # Força uma única atualização após o resize
+        self.update_idletasks()
