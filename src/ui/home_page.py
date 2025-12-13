@@ -353,7 +353,7 @@ class HomePage(ctk.CTkFrame):
             },
             'normalization_test': {
                 'title': 'Testes de Normalidade',
-                'description': 'Shapiro-Wilk, Kolmogorov-Smirnov, etc',
+                'description': 'Shapiro-Wilk, Jarque-Bera, Kolmogorov-Smirnov',
                 'plan': 'intermediate'
             },
             'control_charts': {
@@ -766,6 +766,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'distribution_test':
                 from src.analytics.distribution_test.distribution_test_window import DistributionTestWindow
                 DistributionTestWindow(self, selected_data)
+            elif feature_id == 'normalization_test':
+                from src.analytics.normality_test_window import NormalityTestWindow
+                NormalityTestWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
