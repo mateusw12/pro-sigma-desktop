@@ -2,9 +2,7 @@
 COV EMS Utility Functions
 Component of Variance - Expected Mean Squares Analysis
 """
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-from typing import List, Dict, Tuple
+from typing import List, Dict
 
 
 # Tabela de constantes para subgrupos
@@ -36,40 +34,41 @@ TABELA_SUBGROUP = {
 }
 
 
-def remove_punctuation(df: pd.DataFrame) -> pd.DataFrame:
+def remove_punctuation(df):
     """Remove pontuação dos valores das colunas"""
     for col in df.columns:
         if df[col].dtype == 'object':
-            df[col] = df[col].astype(str).str.replace('[^\w\s]', '', regex=True)
+            df[col] = df[col].astype(str).str.replace(r'[^\w\s]', '', regex=True)
     return df
 
 
-def replace_data_frame(itens: List[str], df: pd.DataFrame) -> pd.DataFrame:
+def replace_data_frame(itens: List[str], df, np_module):
     """Remove colunas onde todos os valores são idênticos"""
     itens_to_remove = []
     for col in itens:
-        if col in df.columns and np.all(df[col] == df[col].iloc[0]):
+        if col in df.columns and np_module.all(df[col] == df[col].iloc[0]):
             itens_to_remove.append(col)
     
     for col in itens_to_remove:
         itens.remove(col)
         df.drop(col, inplace=True, axis=1)
     
-    return df
+    # Retorna tanto o dataframe quanto a lista atualizada
+    return df, itens
 
 
-def fit_linear_regression(df: pd.DataFrame, formula: str):
+def fit_linear_regression(df, formula: str, smf_module):
     """Ajusta modelo de regressão linear"""
     try:
-        model = smf.ols(formula, data=df).fit()
+        model = smf_module.ols(formula, data=df).fit()
         return model
     except:
         return None
 
 
-def calculate_anova_table(model):
+def calculate_anova_table(model, sm_module):
     """Calcula tabela ANOVA"""
-    table_to_read = sm.stats.anova_lm(model, typ=2)
+    table_to_read = sm_module.stats.anova_lm(model, typ=2)
     table_to_read = table_to_read.fillna('')
     return table_to_read
 
@@ -110,7 +109,7 @@ def combine_strings(string_splited: List[str], separator: str = ' + ') -> str:
     return combined_string
 
 
-def calculate_mean_and_amplitude(df: pd.DataFrame, columns: List[str], 
+def calculate_mean_and_amplitude(df, columns: List[str], 
                                  columns_x: List[str], x) -> Dict:
     """Calcula média e amplitude para análise nested"""
     grouped_items_first = {}
@@ -120,8 +119,13 @@ def calculate_mean_and_amplitude(df: pd.DataFrame, columns: List[str],
     del x_arr_col_rev_to_cut[-1]
 
     for v in range(len(x_arr_col_rev_to_cut)):
-        first_group = df.groupby(x_arr_col_rev_to_cut).first().reset_index()
-        last_group = df.groupby(x_arr_col_rev_to_cut).last().reset_index()
+        # Garante que as colunas existem no dataframe
+        groupby_cols = [col for col in x_arr_col_rev_to_cut if col in df.columns]
+        if not groupby_cols:
+            break
+        
+        first_group = df.groupby(groupby_cols, as_index=False).first()
+        last_group = df.groupby(groupby_cols, as_index=False).last()
         grouped_items_first[v] = first_group
         grouped_items_last[v] = last_group
         amp = []
@@ -134,7 +138,10 @@ def calculate_mean_and_amplitude(df: pd.DataFrame, columns: List[str],
             len_t = 0
             
             if v == 0:
-                for y in range(first_group['line'].iloc[x], last_group['line'].iloc[x] + 1):
+                # Acessa a coluna 'line' que está presente no resultado do groupby
+                first_line = int(first_group.iloc[x]['line'])
+                last_line = int(last_group.iloc[x]['line'])
+                for y in range(first_line, last_line + 1):
                     data_to_mean.append(df[columns[-1]].iloc[y])
                     if greater_value is None or greater_value < df[columns[-1]].iloc[y]:
                         greater_value = df[columns[-1]].iloc[y]
@@ -146,11 +153,14 @@ def calculate_mean_and_amplitude(df: pd.DataFrame, columns: List[str],
             else:
                 len_t = len(grouped_items_first[v - 1]) // len(grouped_items_first[v])
                 for z in range(x * len_t, ((x + 1) * len_t)):
-                    if greater_value is None or greater_value < grouped_items_first[v - 1]['mean'].iloc[z]:
-                        greater_value = grouped_items_first[v - 1]['mean'].iloc[z]
-                    if lower_value is None or lower_value > grouped_items_first[v - 1]['mean'].iloc[z]:
-                        lower_value = grouped_items_first[v - 1]['mean'].iloc[z]
-                for y in range(first_group['line'].iloc[x], last_group['line'].iloc[x] + 1):
+                    mean_val = grouped_items_first[v - 1].iloc[z]['mean']
+                    if greater_value is None or greater_value < mean_val:
+                        greater_value = mean_val
+                    if lower_value is None or lower_value > mean_val:
+                        lower_value = mean_val
+                first_line = int(first_group.iloc[x]['line'])
+                last_line = int(last_group.iloc[x]['line'])
+                for y in range(first_line, last_line + 1):
                     data_to_mean.append(df[columns[-1]].iloc[y])
                 amp.append(greater_value - lower_value)
                 mean.append(sum(data_to_mean) / len(data_to_mean))
@@ -162,11 +172,13 @@ def calculate_mean_and_amplitude(df: pd.DataFrame, columns: List[str],
 
     lower_value = None
     greater_value = None
-    for x in grouped_items_first[len(columns_x) - 2]['mean']:
-        if greater_value is None or greater_value < x:
-            greater_value = x
-        if lower_value is None or lower_value > x:
-            lower_value = x
+    # Acessa os valores da coluna 'mean' no último grupo
+    mean_values = grouped_items_first[len(columns_x) - 2]['mean'].values
+    for mean_val in mean_values:
+        if greater_value is None or greater_value < mean_val:
+            greater_value = mean_val
+        if lower_value is None or lower_value > mean_val:
+            lower_value = mean_val
     r_bar[len(columns_x) - 1] = {'rBar': greater_value - lower_value, 'size': 2}
 
     return r_bar
@@ -214,7 +226,7 @@ def calculate_variation_table(r_bar: Dict, x_arr_col: List[str]) -> Dict:
     return result
 
 
-def check_balanced(df: pd.DataFrame, analysis_type: str) -> bool:
+def check_balanced(df, analysis_type: str) -> bool:
     """Verifica se os dados estão balanceados"""
     if analysis_type == "crossed":
         df = df.iloc[:, :-1]
@@ -229,7 +241,7 @@ def check_balanced(df: pd.DataFrame, analysis_type: str) -> bool:
         return False
 
 
-def calculate_mean_square(sum_sq, df_values: pd.Series) -> List[float]:
+def calculate_mean_square(sum_sq, df_values) -> List[float]:
     """Calcula quadrado médio"""
     return [sum_sq[x] / df_values[x] if df_values[x] != 0 else 0 for x in range(len(sum_sq))]
 

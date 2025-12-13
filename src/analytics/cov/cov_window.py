@@ -5,7 +5,11 @@ Supports both Nested (Hierarchical) and Crossed analysis
 """
 import customtkinter as ctk
 from tkinter import messagebox
-from src.utils.lazy_imports import get_numpy, get_pandas, get_scipy_stats, get_matplotlib, get_matplotlib_figure, get_matplotlib_backend
+from src.utils.lazy_imports import (
+    get_numpy, get_pandas, get_scipy_stats, get_matplotlib, 
+    get_matplotlib_figure, get_matplotlib_backend,
+    get_statsmodels_api, get_statsmodels_formula
+)
 from typing import List, Dict
 
 from src.analytics.cov.cov_utils import (
@@ -24,9 +28,6 @@ from src.analytics.cov.cov_utils import (
     get_replace_label_crossed
 )
 
-
-
-
 # Lazy-loaded libraries
 _pd = None
 _np = None
@@ -34,10 +35,12 @@ _stats = None
 _plt = None
 _Figure = None
 _FigureCanvasTkAgg = None
+_sm = None
+_smf = None
 
 def _ensure_libs():
     """Carrega bibliotecas pesadas apenas quando necessário"""
-    global _pd, _np, _stats, _plt, _Figure, _FigureCanvasTkAgg
+    global _pd, _np, _stats, _plt, _Figure, _FigureCanvasTkAgg, _sm, _smf
     if _pd is None:
         _pd = get_pandas()
         _np = get_numpy()
@@ -45,7 +48,9 @@ def _ensure_libs():
         _plt = get_matplotlib()
         _Figure = get_matplotlib_figure()
         _FigureCanvasTkAgg = get_matplotlib_backend()
-    return _pd, _np, _stats, _plt, _Figure, _FigureCanvasTkAgg
+        _sm = get_statsmodels_api()
+        _smf = get_statsmodels_formula()
+    return _pd, _np, _stats, _plt, _Figure, _FigureCanvasTkAgg, _sm, _smf
 
 
 class CovEmsWindow(ctk.CTkToplevel):
@@ -53,13 +58,15 @@ class CovEmsWindow(ctk.CTkToplevel):
         super().__init__(parent)
 
         # Carrega bibliotecas pesadas (lazy)
-        pd, np, stats, plt, Figure, FigureCanvasTkAgg = _ensure_libs()
+        pd, np, stats, plt, Figure, FigureCanvasTkAgg, sm, smf = _ensure_libs()
         self.pd = pd
         self.np = np
         self.stats = stats
         self.plt = plt
         self.Figure = Figure
         self.FigureCanvasTkAgg = FigureCanvasTkAgg
+        self.sm = sm
+        self.smf = smf
         
         self.df = df
         self.results = None
@@ -292,10 +299,9 @@ class CovEmsWindow(ctk.CTkToplevel):
             # Prepare data
             all_cols = x_cols + y_cols
             work_df = self.df[all_cols].copy()
-            work_df = remove_punctuation(work_df)
             
             # Remove columns with all identical values
-            work_df = replace_data_frame(x_cols.copy(), work_df)
+            work_df, x_cols = replace_data_frame(x_cols.copy(), work_df, self.np)
             
             # Check if data is balanced
             is_balanced = check_balanced(work_df, analysis_type)
@@ -363,13 +369,13 @@ class CovEmsWindow(ctk.CTkToplevel):
             total_string += " + " + combined_string
         
         # Fit model
-        model = fit_linear_regression(analysis_df, total_string)
+        model = fit_linear_regression(analysis_df, total_string, self.smf)
         
         if model is None:
             return None
         
         # Calculate ANOVA
-        anova_table = calculate_anova_table(model)
+        anova_table = calculate_anova_table(model, self.sm)
         
         sum_sq = anova_table["sum_sq"]
         df_values = anova_table["df"]

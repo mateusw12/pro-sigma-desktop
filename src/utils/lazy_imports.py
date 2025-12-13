@@ -70,6 +70,8 @@ lazy_scipy_stats = LazyModule('scipy.stats')
 lazy_matplotlib = LazyModule('matplotlib.pyplot', _import_matplotlib)
 lazy_matplotlib_figure = LazyModule('matplotlib.figure', _import_matplotlib_figure)
 lazy_matplotlib_backend = LazyModule('matplotlib.backends.backend_tkagg', _import_matplotlib_backend)
+lazy_statsmodels_api = LazyModule('statsmodels.api')
+lazy_statsmodels_formula = LazyModule('statsmodels.formula.api')
 
 
 def get_numpy():
@@ -100,6 +102,16 @@ def get_matplotlib_figure():
 def get_matplotlib_backend():
     """Retorna FigureCanvasTkAgg, carregando apenas quando necessário"""
     return lazy_matplotlib_backend._load_module()
+
+
+def get_statsmodels_api():
+    """Retorna statsmodels.api, carregando apenas quando necessário"""
+    return lazy_statsmodels_api._load_module()
+
+
+def get_statsmodels_formula():
+    """Retorna statsmodels.formula.api, carregando apenas quando necessário"""
+    return lazy_statsmodels_formula._load_module()
 
 
 # ===== FUNÇÕES AUXILIARES =====
