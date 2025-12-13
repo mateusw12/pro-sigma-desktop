@@ -10,24 +10,14 @@ from tkinter import ttk, messagebox
 from src.utils.lazy_imports import get_numpy, get_pandas, get_scipy_stats, get_matplotlib, get_matplotlib_figure, get_matplotlib_backend
 
 
-CANDIDATES = {
-    "Normal": self.stats.norm,
-    "Lognormal": self.stats.lognorm,  # shape, loc, scale (shape=sigma)
-    "Weibull": self.stats.weibull_min,  # shape=k, loc, scale
-    "Exponential": self.stats.expon,  # loc, scale
-    "Gamma": self.stats.gamma,  # a, loc, scale
-}
-
-
 def compute_aic(n, loglik, k):
+    """Calcula AIC (Akaike Information Criterion)"""
     return 2 * k - 2 * loglik
 
 
-def compute_bic(n, loglik, k):
-    return k * self.np.log(n) - 2 * loglik
-
-
-
+def compute_bic(n, loglik, k, np_module):
+    """Calcula BIC (Bayesian Information Criterion)"""
+    return k * np_module.log(n) - 2 * loglik
 
 # Lazy-loaded libraries
 _pd = None
@@ -70,6 +60,15 @@ class DistributionTestWindow(ctk.CTkToplevel):
 
         self.df = df.copy()
         self.numeric_cols = list(self.df.select_dtypes(include="number").columns)
+        
+        # Define candidates usando stats carregado
+        self.candidates = {
+            "Normal": self.stats.norm,
+            "Lognormal": self.stats.lognorm,
+            "Weibull": self.stats.weibull_min,
+            "Exponential": self.stats.expon,
+            "Gamma": self.stats.gamma,
+        }
 
         self._build_ui()
 
@@ -117,7 +116,7 @@ class DistributionTestWindow(ctk.CTkToplevel):
         self.d_checks = {}
         d_scroll = ctk.CTkScrollableFrame(left, width=240, height=160)
         d_scroll.pack(padx=12, pady=(4, 8), fill="x")
-        for name in CANDIDATES.keys():
+        for name in self.candidates.keys():
             var = ctk.BooleanVar(value=name in ("Normal", "Lognormal", "Weibull"))
             cb = ctk.CTkCheckBox(d_scroll, text=name, variable=var)
             cb.pack(anchor="w", pady=2, padx=4)
@@ -184,14 +183,14 @@ class DistributionTestWindow(ctk.CTkToplevel):
             if n == 0:
                 continue
             for dist_name in dists:
-                dist = CANDIDATES[dist_name]
+                dist = self.candidates[dist_name]
                 try:
                     params = dist.fit(data)
                     logpdf = dist.logpdf(data, *params)
                     loglik = float(self.np.sum(logpdf))
                     k = len(params)
                     aic = compute_aic(n, loglik, k)
-                    bic = compute_bic(n, loglik, k)
+                    bic = compute_bic(n, loglik, k, self.np)
 
                     # Params pretty
                     ptxt = ", ".join([f"{p:.4g}" if isinstance(p, (int, float, self.np.floating)) else str(p) for p in params])
