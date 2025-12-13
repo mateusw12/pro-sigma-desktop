@@ -267,12 +267,12 @@ class HomePage(ctk.CTkFrame):
         
         # Header das ferramentas
         tools_header = ctk.CTkFrame(tools_container, fg_color="transparent")
-        tools_header.pack(fill="x", pady=(0, 10))
+        tools_header.pack(fill="x", pady=(0, 15))
         
         tools_title = ctk.CTkLabel(
             tools_header,
             text="🔧 Ferramentas Disponíveis",
-            font=ctk.CTkFont(size=18, weight="bold")
+            font=ctk.CTkFont(size=20, weight="bold")
         )
         tools_title.pack(side="left")
         
@@ -280,17 +280,17 @@ class HomePage(ctk.CTkFrame):
         features_count = len(self.license_data.get('features', []))
         count_badge = ctk.CTkLabel(
             tools_header,
-            text=f"{features_count} ferramentas",
-            font=ctk.CTkFont(size=11, weight="bold"),
+            text=f"{features_count}",
+            font=ctk.CTkFont(size=12, weight="bold"),
             text_color="white",
             fg_color="#2E86DE",
-            corner_radius=12,
-            padx=12,
-            pady=4
+            corner_radius=15,
+            width=30,
+            height=30
         )
         count_badge.pack(side="left", padx=(10, 0))
         
-        # Grid de ferramentas (otimizado para performance)
+        # Grid de ferramentas com scroll
         self.tools_scroll = ctk.CTkScrollableFrame(
             tools_container,
             fg_color="transparent",
@@ -300,8 +300,8 @@ class HomePage(ctk.CTkFrame):
         self.tools_scroll.pack(fill="both", expand=True)
         optimize_frame_resize(self.tools_scroll)
         
-        # Otimiza scrolling para melhor performance
-        self.tools_scroll._scrollbar.configure(width=12)
+        # Otimiza scrolling
+        self.tools_scroll._scrollbar.configure(width=10)
         
         # Cria botões das ferramentas
         self.create_tool_buttons()
@@ -481,7 +481,7 @@ class HomePage(ctk.CTkFrame):
         # Grid de ferramentas desta categoria
         row_frame = None
         col_count = 0
-        max_cols = 3  # 3 cards por linha
+        max_cols = 4  # 4 botões por linha para layout mais clean
         
         # Ícones pré-definidos para evitar recriação
         icon_map = {
@@ -508,64 +508,55 @@ class HomePage(ctk.CTkFrame):
                 col_count = 0
     
     def _create_tool_card(self, parent, feature_id, tool_info, icon_map):
-        """Cria um card de ferramenta otimizado"""
-        # Card da ferramenta
-        tool_card = ctk.CTkFrame(parent, corner_radius=10, border_width=1, border_color="gray25")
-        tool_card.pack(side="left", fill="both", expand=True, padx=5, pady=5)
-        
-        # Efeito hover otimizado (usando lambda para evitar múltiplas funções)
-        tool_card.bind("<Enter>", lambda e: tool_card.configure(border_color="#2E86DE"))
-        tool_card.bind("<Leave>", lambda e: tool_card.configure(border_color="gray25"))
-        
-        # Container interno do card
-        card_content = ctk.CTkFrame(tool_card, fg_color="transparent")
-        card_content.pack(fill="both", expand=True, padx=15, pady=12)
-        
-        # Ícone
+        """Cria um card de ferramenta otimizado com design clean"""
+        # Botão em formato de card
         icon = icon_map.get(feature_id, '🔧')
-        icon_label = ctk.CTkLabel(
-            card_content,
-            text=icon,
-            font=ctk.CTkFont(size=32)
-        )
-        icon_label.pack(pady=(5, 8))
         
-        # Título da ferramenta
-        title_label = ctk.CTkLabel(
-            card_content,
-            text=tool_info['title'],
-            font=ctk.CTkFont(size=13, weight="bold"),
-            anchor="center",
-            wraplength=200
+        tool_button = ctk.CTkButton(
+            parent,
+            text=f"{icon}\n\n{tool_info['title']}",
+            command=lambda: self.open_tool(feature_id),
+            width=180,
+            height=140,
+            corner_radius=12,
+            fg_color="gray20",
+            hover_color="#2E86DE",
+            border_width=2,
+            border_color="gray30",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            anchor="center"
         )
-        title_label.pack(pady=(0, 6))
+        tool_button.pack(side="left", padx=8, pady=8)
         
-        # Descrição
-        desc_label = ctk.CTkLabel(
-            card_content,
-            text=tool_info['description'],
-            font=ctk.CTkFont(size=10),
-            text_color="gray60",
-            anchor="center",
-            wraplength=200,
-            height=40
-        )
-        desc_label.pack(pady=(0, 10))
+        # Tooltip com descrição (aparece no hover)
+        self._create_tooltip(tool_button, tool_info['description'])
         
-        # Botão de ação compacto
-        action_btn = ctk.CTkButton(
-            card_content,
-            text="Abrir →",
-            command=lambda fid=feature_id: self.open_tool(fid),
-            height=32,
-            font=ctk.CTkFont(size=11, weight="bold"),
-            fg_color="#2E86DE",
-            hover_color="#1E5BA8",
-            corner_radius=6
-        )
-        action_btn.pack(fill="x")
+        return tool_button
+    
+    def _create_tooltip(self, widget, text):
+        """Cria tooltip para o widget"""
+        def show_tooltip(event):
+            # Cria label flutuante com descrição
+            tooltip = ctk.CTkLabel(
+                widget,
+                text=text,
+                font=ctk.CTkFont(size=9),
+                text_color="gray70",
+                fg_color="gray10",
+                corner_radius=6,
+                padx=8,
+                pady=4
+            )
+            tooltip.place(relx=0.5, rely=1.0, anchor="n", y=5)
+            widget._tooltip = tooltip
         
-        return tool_card
+        def hide_tooltip(event):
+            if hasattr(widget, '_tooltip'):
+                widget._tooltip.destroy()
+                delattr(widget, '_tooltip')
+        
+        widget.bind("<Enter>", show_tooltip)
+        widget.bind("<Leave>", hide_tooltip)
     
     def import_excel(self):
         """Importa arquivo Excel"""

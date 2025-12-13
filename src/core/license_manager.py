@@ -18,7 +18,7 @@ class LicenseManager:
             'name': 'Básico',
             'features': [
                 'variability', 'process_capability', 'hypothesis_test',
-                'distribution_test', 'cov_ems', 'analytics',
+                'distribution_test', 'cov_ems',
                 'descriptive_stats'
             ]
         },
@@ -26,7 +26,7 @@ class LicenseManager:
             'name': 'Intermediário',
             'features': [
                 'variability', 'process_capability', 'hypothesis_test',
-                'distribution_test', 'cov_ems', 'analytics',
+                'distribution_test', 'cov_ems',
                 'text_analysis', 'normalization_test', 'control_charts', 
                 'dashboard', 'monte_carlo', 'cov_ems', 'descriptive_stats'
             ]
@@ -35,7 +35,7 @@ class LicenseManager:
             'name': 'Pro',
             'features': [
                 'variability', 'process_capability', 'hypothesis_test',
-                'distribution_test', 'cov_ems', 'analytics',
+                'distribution_test', 'cov_ems',
                 'text_analysis', 'normalization_test', 'control_charts', 
                 'dashboard', 'monte_carlo',
                 'simple_regression', 'multiple_regression', 'multivariate',

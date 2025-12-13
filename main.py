@@ -29,9 +29,6 @@ class ProSigmaApp(ctk.CTk):
         self.resizable(True, True)
         self.minsize(1000, 600)  # Tamanho mínimo para evitar problemas de layout
         
-        # Inicia maximizado para melhor experiência
-        self.state('zoomed')  # Windows
-        
         # Pré-carrega módulos pesados em background para melhor performance
         # Isso ocorre enquanto o usuário vê a tela de login
         preload_heavy_modules()
@@ -57,10 +54,14 @@ class ProSigmaApp(ctk.CTk):
         self.license_data = self.license_manager.load_license()
         
         if self.license_data:
-            # Licença válida encontrada, carrega página inicial
+            # Licença válida encontrada, maximiza e carrega página inicial
+            self.update_idletasks()
+            self.state('zoomed')
+            self.update_idletasks()
             self.load_home_page()
         else:
-            # Sem licença, mostra tela de login
+            # Sem licença, esconde janela principal e mostra tela de login
+            self.withdraw()  # Esconde a janela principal
             self.show_login()
     
     def show_login(self):
@@ -76,6 +77,11 @@ class ProSigmaApp(ctk.CTk):
             license_data: Dados da licença validada
         """
         self.license_data = license_data
+        # Mostra a janela principal maximizada
+        self.deiconify()  # Mostra a janela
+        self.update_idletasks()  # Força atualização
+        self.state('zoomed')  # Maximiza
+        self.update_idletasks()  # Força novamente
         self.load_home_page()
     
     def load_home_page(self):
