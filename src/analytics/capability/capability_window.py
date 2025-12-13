@@ -11,7 +11,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 from scipy.stats import chi2, weibull_min, norm
 
-from src.analytics.capability_utils import (
+from .capability_utils import (
     calculate_pp_ppk,
     calculate_cp_cpk,
     calculate_process_summary,
@@ -25,7 +25,7 @@ from src.analytics.capability_utils import (
     remove_last_column,
     calculate_ppk_not_normal,
     calculate_cpk_not_normal,
-    fit_weibull
+    fit_weibull,
 )
 
 

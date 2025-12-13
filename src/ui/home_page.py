@@ -751,7 +751,7 @@ class HomePage(ctk.CTkFrame):
             
             # Open the appropriate tool
             if feature_id == 'process_capability':
-                from src.analytics.capability_window import CapabilityWindow
+                from src.analytics.capability.capability_window import CapabilityWindow
                 capability_window = CapabilityWindow(self, selected_data)
             elif feature_id == 'cov_ems':
                 from src.analytics.cov_window import CovEmsWindow
@@ -885,13 +885,21 @@ class HomePage(ctk.CTkFrame):
         Handler otimizado para eventos de configuração (resize)
         Usa debounce para evitar múltiplas reconstruções
         """
+        # Se a janela já foi destruída, ignora callbacks pendentes
+        if not self.winfo_exists():
+            return
+        
         # Ignora eventos que não são da própria janela
         if event.widget != self:
             return
         
         # Cancela timer anterior se existir
         if self._resize_after_id:
-            self.after_cancel(self._resize_after_id)
+            try:
+                self.after_cancel(self._resize_after_id)
+            except Exception:
+                pass
+            self._resize_after_id = None
         
         # Agenda atualização após 150ms de inatividade
         self._resize_after_id = self.after(150, self._handle_resize)
@@ -900,8 +908,22 @@ class HomePage(ctk.CTkFrame):
         """
         Processa o redimensionamento de forma otimizada
         """
+        # Se a janela foi destruída, aborta
+        if not self.winfo_exists():
+            return
+
         self._is_resizing = False
         self._resize_after_id = None
         
         # Força uma única atualização após o resize
         self.update_idletasks()
+
+    def destroy(self):
+        """Cancela callbacks pendentes antes de destruir."""
+        if self._resize_after_id:
+            try:
+                self.after_cancel(self._resize_after_id)
+            except Exception:
+                pass
+            self._resize_after_id = None
+        super().destroy()
