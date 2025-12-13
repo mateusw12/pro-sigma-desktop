@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist-info/
+.eggs/
+*.manifest
+*.spec
+
+# Virtual Environment
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyInstaller
+# Build files
+build/
+dist/
+*.spec
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# Testes
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
+*.log
+
+# Dados locais / Configurações do usuário
+.pro_sigma/
+*.dat
+
+# Arquivos temporários
+*.tmp
+*.bak
+*.cache
+
+# Sistema Operacional
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Distribuição
+*.zip
+*.tar.gz
+*.rar
