@@ -33,8 +33,7 @@ class HomePage(ctk.CTkFrame):
         self.file_history = FileHistory()
         
         # Otimizações de performance
-        self._is_resizing = False
-        self._resize_after_id = None
+        self._debounced_resize = resize_optimizer.debounce(self._handle_resize)
         
         self.create_widgets()
         
@@ -47,6 +46,7 @@ class HomePage(ctk.CTkFrame):
         # Container principal com menu lateral
         main_container = ctk.CTkFrame(self, fg_color="transparent")
         main_container.pack(fill="both", expand=True)
+        optimize_frame_resize(main_container)
         
         # ===== MENU LATERAL =====
         self.sidebar = ctk.CTkFrame(main_container, width=220, corner_radius=0)
@@ -298,6 +298,7 @@ class HomePage(ctk.CTkFrame):
             scrollbar_button_hover_color="#1E5BA8"
         )
         self.tools_scroll.pack(fill="both", expand=True)
+        optimize_frame_resize(self.tools_scroll)
         
         # Otimiza scrolling para melhor performance
         self.tools_scroll._scrollbar.configure(width=12)
@@ -896,16 +897,8 @@ class HomePage(ctk.CTkFrame):
         if event.widget != self:
             return
         
-        # Cancela timer anterior se existir
-        if self._resize_after_id:
-            try:
-                self.after_cancel(self._resize_after_id)
-            except Exception:
-                pass
-            self._resize_after_id = None
-        
-        # Agenda atualização após 150ms de inatividade
-        self._resize_after_id = self.after(150, self._handle_resize)
+        # Usa debounce centralizado
+        self._debounced_resize()
     
     def _handle_resize(self):
         """
@@ -915,18 +908,14 @@ class HomePage(ctk.CTkFrame):
         if not self.winfo_exists():
             return
 
-        self._is_resizing = False
-        self._resize_after_id = None
-        
         # Força uma única atualização após o resize
         self.update_idletasks()
 
     def destroy(self):
         """Cancela callbacks pendentes antes de destruir."""
-        if self._resize_after_id:
-            try:
-                self.after_cancel(self._resize_after_id)
-            except Exception:
-                pass
-            self._resize_after_id = None
+        try:
+            if resize_optimizer.pending_call:
+                self.after_cancel(resize_optimizer.pending_call)
+        except Exception:
+            pass
         super().destroy()
