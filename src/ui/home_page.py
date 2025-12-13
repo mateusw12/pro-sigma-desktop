@@ -783,6 +783,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'normalization_test':
                 from src.analytics.normality_test.normality_test_window import NormalityTestWindow
                 NormalityTestWindow(self, selected_data)
+            elif feature_id == 'control_charts':
+                from src.analytics.control_charts.control_chart_window import ControlChartWindow
+                ControlChartWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(

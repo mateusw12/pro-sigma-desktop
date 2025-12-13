@@ -5,6 +5,7 @@ Allows user to perform Cp/Cpk and Pp/Ppk analysis on selected data
 import customtkinter as ctk
 from tkinter import messagebox
 from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib, get_scipy_stats
+from src.utils.ui_components import create_minitab_style_table
 
 from .capability_utils import (
     calculate_pp_ppk,
@@ -734,112 +735,62 @@ class CapabilityWindow(ctk.CTkToplevel):
         table_frame = ctk.CTkFrame(parent)
         table_frame.pack(fill="x", pady=(0, 20))
         
-        ctk.CTkLabel(
-            table_frame,
-            text="Within Sigma Capability",
-            font=ctk.CTkFont(size=16, weight="bold")
-        ).pack(pady=10)
-        
-        # Create table
-        table_data_frame = ctk.CTkFrame(table_frame)
-        table_data_frame.pack(fill="x", padx=10, pady=(0, 10))
-        
-        # Header
-        headers = ["Termo", "Estimativa", "IC Inferior", "IC Superior", "PPM"]
-        for col, header in enumerate(headers):
-            ctk.CTkLabel(
-                table_data_frame,
-                text=header,
-                font=ctk.CTkFont(weight="bold"),
-                width=80
-            ).grid(row=0, column=col, padx=5, pady=5, sticky="ew")
-        
-        # Data rows - reversed order (Cpk, Cpl, Cpu, Cp)
+        # Data rows - order: Cp, Cpu, Cpl, Cpk
         indices = [
-            ("Cpk", "cpk", "cpk_lower", "cpk_upper", "rate_cpk"),
-            ("Cpl", "cpl", None, None, "rate_cpl"),
+            ("Cp", "cp", "cp_lower", "cp_upper", "rate_cp"),
             ("Cpu", "cpu", None, None, "rate_cpu"),
-            ("Cp", "cp", "cp_lower", "cp_upper", "rate_cp")
+            ("Cpl", "cpl", None, None, "rate_cpl"),
+            ("Cpk", "cpk", "cpk_lower", "cpk_upper", "rate_cpk")
         ]
         
-        for row, (label, val_key, lower_key, upper_key, rate_key) in enumerate(indices, start=1):
-            ctk.CTkLabel(table_data_frame, text=label, width=80).grid(row=row, column=0, padx=5, pady=3)
-            ctk.CTkLabel(table_data_frame, text=f"{self.results[val_key]:.4f}", width=80).grid(row=row, column=1, padx=5, pady=3)
-            
-            # IC Inferior
-            if lower_key and lower_key in self.results:
-                ctk.CTkLabel(table_data_frame, text=f"{self.results[lower_key]:.4f}", width=80).grid(row=row, column=2, padx=5, pady=3)
-            else:
-                ctk.CTkLabel(table_data_frame, text="-", width=80).grid(row=row, column=2, padx=5, pady=3)
-            
-            # IC Superior
-            if upper_key and upper_key in self.results:
-                ctk.CTkLabel(table_data_frame, text=f"{self.results[upper_key]:.4f}", width=80).grid(row=row, column=3, padx=5, pady=3)
-            else:
-                ctk.CTkLabel(table_data_frame, text="-", width=80).grid(row=row, column=3, padx=5, pady=3)
-            
-            # PPM
-            if rate_key and rate_key in self.results:
-                ppm_val = int(self.results[rate_key])
-                ctk.CTkLabel(table_data_frame, text=f"{ppm_val:,}", width=80).grid(row=row, column=4, padx=5, pady=3)
-            else:
-                ctk.CTkLabel(table_data_frame, text="-", width=80).grid(row=row, column=4, padx=5, pady=3)
+        data_rows = []
+        for label, val_key, lower_key, upper_key, rate_key in indices:
+            row = [label]
+            row.append(f"{self.results[val_key]:.4f}")
+            row.append(f"{self.results[lower_key]:.4f}" if lower_key and lower_key in self.results else "-")
+            row.append(f"{self.results[upper_key]:.4f}" if upper_key and upper_key in self.results else "-")
+            ppm = f"{int(self.results[rate_key]):,}" if rate_key and rate_key in self.results else "-"
+            row.append(ppm)
+            data_rows.append(row)
+        
+        create_minitab_style_table(
+            table_frame,
+            headers=["Termo", "Estimativa", "IC Inferior", "IC Superior", "PPM"],
+            data_rows=data_rows,
+            title="Within Sigma Capability",
+            column_widths=[100, 120, 120, 120, 120]
+        )
     
     def display_overall_sigma_table(self, parent):
         """Display Overall Sigma Capability table"""
         table_frame = ctk.CTkFrame(parent)
         table_frame.pack(fill="x", pady=(0, 20))
         
-        ctk.CTkLabel(
-            table_frame,
-            text="Overall Sigma Capability",
-            font=ctk.CTkFont(size=16, weight="bold")
-        ).pack(pady=10)
-        
-        # Create table
-        table_data_frame = ctk.CTkFrame(table_frame)
-        table_data_frame.pack(fill="x", padx=10, pady=(0, 10))
-        
-        # Header
-        headers = ["Termo", "Estimativa", "IC Inferior", "IC Superior", "PPM"]
-        for col, header in enumerate(headers):
-            ctk.CTkLabel(
-                table_data_frame,
-                text=header,
-                font=ctk.CTkFont(weight="bold"),
-                width=80
-            ).grid(row=0, column=col, padx=5, pady=5, sticky="ew")
-        
-        # Data rows - reversed order (Ppk, Ppl, Ppu, Pp)
+        # Data rows - order: Pp, Ppu, Ppl, Ppk
         indices = [
-            ("Ppk", "ppk", "ppk_lower", "ppk_upper", "rate_ppk"),
-            ("Ppl", "ppl", None, None, "rate_ppl"),
+            ("Pp", "pp", "pp_lower", "pp_upper", "rate_pp"),
             ("Ppu", "ppu", None, None, "rate_ppu"),
-            ("Pp", "pp", "pp_lower", "pp_upper", "rate_pp")
+            ("Ppl", "ppl", None, None, "rate_ppl"),
+            ("Ppk", "ppk", "ppk_lower", "ppk_upper", "rate_ppk")
         ]
         
-        for row, (label, val_key, lower_key, upper_key, rate_key) in enumerate(indices, start=1):
-            ctk.CTkLabel(table_data_frame, text=label, width=80).grid(row=row, column=0, padx=5, pady=3)
-            ctk.CTkLabel(table_data_frame, text=f"{self.results[val_key]:.4f}", width=80).grid(row=row, column=1, padx=5, pady=3)
-            
-            # IC Inferior
-            if lower_key and lower_key in self.results:
-                ctk.CTkLabel(table_data_frame, text=f"{self.results[lower_key]:.4f}", width=80).grid(row=row, column=2, padx=5, pady=3)
-            else:
-                ctk.CTkLabel(table_data_frame, text="-", width=80).grid(row=row, column=3, padx=5, pady=3)
-            
-            # IC Superior
-            if upper_key and upper_key in self.results:
-                ctk.CTkLabel(table_data_frame, text=f"{self.results[upper_key]:.4f}", width=80).grid(row=row, column=3, padx=5, pady=3)
-            else:
-                ctk.CTkLabel(table_data_frame, text="-", width=80).grid(row=row, column=3, padx=5, pady=3)
-            
-            # PPM
-            if rate_key and rate_key in self.results:
-                ppm_val = int(self.results[rate_key])
-                ctk.CTkLabel(table_data_frame, text=f"{ppm_val:,}", width=80).grid(row=row, column=4, padx=5, pady=3)
-            else:
-                ctk.CTkLabel(table_data_frame, text="-", width=80).grid(row=row, column=4, padx=5, pady=3)
+        data_rows = []
+        for label, val_key, lower_key, upper_key, rate_key in indices:
+            row = [label]
+            row.append(f"{self.results[val_key]:.4f}")
+            row.append(f"{self.results[lower_key]:.4f}" if lower_key and lower_key in self.results else "-")
+            row.append(f"{self.results[upper_key]:.4f}" if upper_key and upper_key in self.results else "-")
+            ppm = f"{int(self.results[rate_key]):,}" if rate_key and rate_key in self.results else "-"
+            row.append(ppm)
+            data_rows.append(row)
+        
+        create_minitab_style_table(
+            table_frame,
+            headers=["Termo", "Estimativa", "IC Inferior", "IC Superior", "PPM"],
+            data_rows=data_rows,
+            title="Overall Sigma Capability",
+            column_widths=[100, 120, 120, 120, 120]
+        )
     
     def display_overall_sigma_table_not_normal(self, parent):
         """Display Overall Sigma Capability table for non-normal distribution"""
