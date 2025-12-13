@@ -8,9 +8,6 @@ from tkinter import ttk, messagebox
 from src.utils.lazy_imports import get_numpy, get_pandas, get_scipy_stats, get_matplotlib, get_matplotlib_figure, get_matplotlib_backend
 import seaborn as sns
 
-
-
-
 # Lazy-loaded libraries
 _pd = None
 _np = None
@@ -177,7 +174,7 @@ class DescriptiveStatsWindow(ctk.CTkToplevel):
         rows = []
         df = self.df
 
-        def calc_stats(series: self.pd.Series):
+        def calc_stats(series):
             clean = series.dropna()
             if clean.empty:
                 return None
