@@ -25,6 +25,7 @@ eyJwbGFuIjogImJhc2ljIiwgImV4cGlyYXRlZERhdGUiOiAiMjAyNi0xMi0zMSJ9fDE1YTA2ZTY4ZjI3
 - ✓ COV EMS
 - ✓ Análise de Distribuição
 - ✓ Analytics
+- ✓ Descriptive Statistics (histogramas, boxplots, métricas)
 
 ---
 

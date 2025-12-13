@@ -340,6 +340,11 @@ class HomePage(ctk.CTkFrame):
                 'description': 'Análise e formatação de dados',
                 'plan': 'basic'
             },
+            'descriptive_stats': {
+                'title': 'Descriptive Statistics',
+                'description': 'Histograms, boxplots, summary metrics',
+                'plan': 'basic'
+            },
             'text_analysis': {
                 'title': 'Text Analysis',
                 'description': 'Análise textual e frequência de palavras',
@@ -494,7 +499,7 @@ class HomePage(ctk.CTkFrame):
                     'control_charts': '📊', 'dashboard': '📊', 'monte_carlo': '🎲', 'cov_ems': '🎲',
                     'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '🔄',
                     'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'warranty_costs': '💰',
-                    'neural_networks': '🧠', 'decision_tree': '🌳'
+                    'neural_networks': '🧠', 'decision_tree': '🌳', 'descriptive_stats': '📊'
                 }
                 icon = icon_map.get(feature_id, '🔧')
                 
@@ -754,6 +759,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'hypothesis_test':
                 from src.analytics.hypothesis_test.hypothesis_test_window import HypothesisTestWindow
                 hypothesis_window = HypothesisTestWindow(self, selected_data)
+            elif feature_id == 'descriptive_stats':
+                from src.analytics.descriptive_stats_window import DescriptiveStatsWindow
+                DescriptiveStatsWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(

@@ -18,7 +18,8 @@ class LicenseManager:
             'name': 'Básico',
             'features': [
                 'variability', 'process_capability', 'hypothesis_test',
-                'distribution_test', 'cov_ems', 'analytics'
+                'distribution_test', 'cov_ems', 'analytics',
+                'descriptive_stats'
             ]
         },
         'intermediate': {
@@ -27,7 +28,7 @@ class LicenseManager:
                 'variability', 'process_capability', 'hypothesis_test',
                 'distribution_test', 'cov_ems', 'analytics',
                 'text_analysis', 'normalization_test', 'control_charts', 
-                'dashboard', 'monte_carlo', 'cov_ems'
+                'dashboard', 'monte_carlo', 'cov_ems', 'descriptive_stats'
             ]
         },
         'pro': {
@@ -39,7 +40,7 @@ class LicenseManager:
                 'dashboard', 'monte_carlo',
                 'simple_regression', 'multiple_regression', 'multivariate',
                 'stackup', 'doe', 'space_filling', 'warranty_costs',
-                'neural_networks', 'decision_tree'
+                'neural_networks', 'decision_tree', 'descriptive_stats'
             ]
         }
     }
