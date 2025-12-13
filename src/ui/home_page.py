@@ -760,8 +760,11 @@ class HomePage(ctk.CTkFrame):
                 from src.analytics.hypothesis_test.hypothesis_test_window import HypothesisTestWindow
                 hypothesis_window = HypothesisTestWindow(self, selected_data)
             elif feature_id == 'descriptive_stats':
-                from src.analytics.descriptive_stats_window import DescriptiveStatsWindow
+                from src.analytics.descriptise_stats.descriptive_stats_window import DescriptiveStatsWindow
                 DescriptiveStatsWindow(self, selected_data)
+            elif feature_id == 'distribution_test':
+                from src.analytics.distribution_test.distribution_test_window import DistributionTestWindow
+                DistributionTestWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
