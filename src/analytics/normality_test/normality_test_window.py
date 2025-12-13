@@ -10,8 +10,16 @@ from src.utils.lazy_imports import get_pandas, get_numpy, get_scipy_stats, get_m
 
 
 class NormalityTestWindow(ctk.CTkToplevel):
-    def __init__(self, parent, df: pd.DataFrame):
+    def __init__(self, parent, df):
         super().__init__(parent)
+        
+        # Carrega bibliotecas lazy
+        self.pd = get_pandas()
+        self.np = get_numpy()
+        self.stats = get_scipy_stats()
+        self.Figure = get_matplotlib_figure()
+        self.FigureCanvasTkAgg = get_matplotlib_backend()
+        
         self.title("Normality Test")
         self.geometry("1000x700")
         self.minsize(820, 560)
@@ -23,7 +31,7 @@ class NormalityTestWindow(ctk.CTkToplevel):
         self.grab_set()
 
         self.df = df.copy()
-        self.numeric_cols = [c for c in self.df.columns if pd.api.types.is_numeric_dtype(self.df[c])]
+        self.numeric_cols = [c for c in self.df.columns if self.pd.api.types.is_numeric_dtype(self.df[c])]
         if not self.numeric_cols:
             messagebox.showerror("Erro", "Nenhuma coluna numérica disponível para teste de normalidade.")
             self.destroy()
@@ -94,8 +102,8 @@ class NormalityTestWindow(ctk.CTkToplevel):
 
         self.plot_frame = ctk.CTkFrame(right)
         self.plot_frame.pack(fill="both", expand=True, padx=8, pady=(0, 8))
-        self.figure = Figure(figsize=(8, 4.5), dpi=100)
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self.plot_frame)
+        self.figure = self.Figure(figsize=(8, 4.5), dpi=100)
+        self.canvas = self.FigureCanvasTkAgg(self.figure, master=self.plot_frame)
         self.canvas.get_tk_widget().pack(fill="both", expand=True)
         self.figure.tight_layout()
 
@@ -132,7 +140,7 @@ class NormalityTestWindow(ctk.CTkToplevel):
 
             # Shapiro-Wilk
             try:
-                stat, p = stats.shapiro(series)
+                stat, p = self.stats.shapiro(series)
                 concl = "Não rejeita H0" if p > alpha else "Rejeita H0"
                 self._add_row(col, "Shapiro-Wilk", stat, p, concl)
             except Exception as e:
@@ -140,7 +148,7 @@ class NormalityTestWindow(ctk.CTkToplevel):
 
             # Jarque-Bera
             try:
-                jb_stat, jb_p = stats.jarque_bera(series)
+                jb_stat, jb_p = self.stats.jarque_bera(series)
                 concl = "Não rejeita H0" if jb_p > alpha else "Rejeita H0"
                 self._add_row(col, "Jarque-Bera", jb_stat, jb_p, concl)
             except Exception as e:
@@ -149,9 +157,9 @@ class NormalityTestWindow(ctk.CTkToplevel):
             # Kolmogorov-Smirnov vs N(mean, std)
             try:
                 mu, sigma = series.mean(), series.std(ddof=1)
-                if sigma == 0 or np.isnan(sigma):
+                if sigma == 0 or self.np.isnan(sigma):
                     raise ValueError("Desvio padrão zero ou inválido")
-                ks_stat, ks_p = stats.kstest(series, 'norm', args=(mu, sigma))
+                ks_stat, ks_p = self.stats.kstest(series, 'norm', args=(mu, sigma))
                 concl = "Não rejeita H0" if ks_p > alpha else "Rejeita H0"
                 self._add_row(col, "Kolmogorov-Smirnov", ks_stat, ks_p, concl)
             except Exception as e:
@@ -168,7 +176,7 @@ class NormalityTestWindow(ctk.CTkToplevel):
 
     def _add_row(self, col, test, stat, pval, conclusion):
         def fmt(x):
-            if isinstance(x, (float, np.floating)):
+            if isinstance(x, (float, self.np.floating)):
                 return f"{x:.4g}"
             return str(x)
         self.tree.insert("", "end", values=[col, test, fmt(stat), fmt(pval), conclusion])
@@ -190,9 +198,9 @@ class NormalityTestWindow(ctk.CTkToplevel):
         # Histogram + fitted normal PDF
         ax_hist = self.figure.add_subplot(gs[0, 0])
         ax_hist.hist(series, bins="auto", density=True, alpha=0.65, color="#5DADE2", edgecolor="#1B4F72")
-        if sigma and not np.isnan(sigma):
-            xs = np.linspace(series.min(), series.max(), 200)
-            pdf = stats.norm.pdf(xs, mu, sigma)
+        if sigma and not self.np.isnan(sigma):
+            xs = self.np.linspace(series.min(), series.max(), 200)
+            pdf = self.stats.norm.pdf(xs, mu, sigma)
             ax_hist.plot(xs, pdf, color="#E74C3C", linewidth=2, label="Normal PDF")
         ax_hist.set_title(f"Histograma · {col_name}")
         ax_hist.grid(alpha=0.2)
@@ -200,18 +208,18 @@ class NormalityTestWindow(ctk.CTkToplevel):
 
         # QQ plot
         ax_qq = self.figure.add_subplot(gs[0, 1])
-        stats.probplot(series, dist="norm", plot=ax_qq)
+        self.stats.probplot(series, dist="norm", plot=ax_qq)
         ax_qq.set_title("QQ Plot (Normal)")
         ax_qq.grid(alpha=0.2)
 
         # ECDF vs Normal CDF
         ax_cdf = self.figure.add_subplot(gs[0, 2])
-        sorted_vals = np.sort(series)
+        sorted_vals = self.np.sort(series)
         n = len(sorted_vals)
-        ecdf = np.arange(1, n + 1) / n
+        ecdf = self.np.arange(1, n + 1) / n
         ax_cdf.step(sorted_vals, ecdf, where="post", color="#5DADE2", label="ECDF")
-        if sigma and not np.isnan(sigma):
-            cdf = stats.norm.cdf(sorted_vals, mu, sigma)
+        if sigma and not self.np.isnan(sigma):
+            cdf = self.stats.norm.cdf(sorted_vals, mu, sigma)
             ax_cdf.plot(sorted_vals, cdf, color="#E74C3C", linewidth=2, label="Normal CDF")
         ax_cdf.set_ylim(0, 1)
         ax_cdf.set_title("ECDF vs Normal CDF")
