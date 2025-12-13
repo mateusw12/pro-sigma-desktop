@@ -5,17 +5,47 @@ Shows summary table plus histogram and boxplot.
 """
 import customtkinter as ctk
 from tkinter import ttk, messagebox
-import pandas as pd
+from src.utils.lazy_imports import get_numpy, get_pandas, get_scipy_stats, get_matplotlib, get_matplotlib_figure, get_matplotlib_backend
 import seaborn as sns
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+
+
+
+# Lazy-loaded libraries
+_pd = None
+_np = None
+_stats = None
+_plt = None
+_Figure = None
+_FigureCanvasTkAgg = None
+
+def _ensure_libs():
+    """Carrega bibliotecas pesadas apenas quando necessário"""
+    global _pd, _np, _stats, _plt, _Figure, _FigureCanvasTkAgg
+    if _pd is None:
+        _pd = get_pandas()
+        _np = get_numpy()
+        _stats = get_scipy_stats()
+        _plt = get_matplotlib()
+        _Figure = get_matplotlib_figure()
+        _FigureCanvasTkAgg = get_matplotlib_backend()
+    return _pd, _np, _stats, _plt, _Figure, _FigureCanvasTkAgg
 
 
 class DescriptiveStatsWindow(ctk.CTkToplevel):
     """UI for descriptive statistics with optional grouping and multiple targets."""
 
-    def __init__(self, parent, data: pd.DataFrame):
+    def __init__(self, parent, data):
         super().__init__(parent)
+
+        # Carrega bibliotecas pesadas (lazy)
+        pd, np, stats, plt, Figure, FigureCanvasTkAgg = _ensure_libs()
+        self.pd = pd
+        self.np = np
+        self.stats = stats
+        self.plt = plt
+        self.Figure = Figure
+        self.FigureCanvasTkAgg = FigureCanvasTkAgg
         self.title("Descriptive Statistics")
         self.geometry("1200x800")
         self.minsize(900, 650)
@@ -114,8 +144,8 @@ class DescriptiveStatsWindow(ctk.CTkToplevel):
         self.plot_frame = ctk.CTkFrame(right)
         self.plot_frame.pack(fill="both", expand=True, padx=8, pady=(0, 8))
 
-        self.figure, (self.ax_hist, self.ax_box) = plt.subplots(1, 2, figsize=(10, 4))
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self.plot_frame)
+        self.figure, (self.ax_hist, self.ax_box) = self.plt.subplots(1, 2, figsize=(10, 4))
+        self.canvas = self.FigureCanvasTkAgg(self.figure, master=self.plot_frame)
         self.canvas.get_tk_widget().pack(fill="both", expand=True)
         self.figure.tight_layout()
 
@@ -147,7 +177,7 @@ class DescriptiveStatsWindow(ctk.CTkToplevel):
         rows = []
         df = self.df
 
-        def calc_stats(series: pd.Series):
+        def calc_stats(series: self.pd.Series):
             clean = series.dropna()
             if clean.empty:
                 return None

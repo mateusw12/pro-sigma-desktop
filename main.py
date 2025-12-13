@@ -5,6 +5,8 @@ import customtkinter as ctk
 from src.core.license_manager import LicenseManager
 from src.ui.login_window import LoginWindow
 from src.ui.home_page import HomePage
+from src.utils.lazy_imports import preload_heavy_modules
+from src.utils.render_optimization import optimize_ctk_widgets
 
 
 class ProSigmaApp(ctk.CTk):
@@ -13,10 +15,13 @@ class ProSigmaApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
+        # Aplica otimizações de renderização ANTES de criar widgets
+        optimize_ctk_widgets()
+        
         # Configurações da janela principal
         self.title("Pro Sigma - Análise Estatística Six Sigma")
         
-        # Configuração de tema
+        # Configuração de tema (já otimizado em render_optimization)
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
         
@@ -26,6 +31,10 @@ class ProSigmaApp(ctk.CTk):
         
         # Inicia maximizado para melhor experiência
         self.state('zoomed')  # Windows
+        
+        # Pré-carrega módulos pesados em background para melhor performance
+        # Isso ocorre enquanto o usuário vê a tela de login
+        preload_heavy_modules()
         
         # Gerenciador de licenças
         self.license_manager = LicenseManager()

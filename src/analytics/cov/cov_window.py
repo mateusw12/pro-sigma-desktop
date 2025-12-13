@@ -5,10 +5,7 @@ Supports both Nested (Hierarchical) and Crossed analysis
 """
 import customtkinter as ctk
 from tkinter import messagebox
-import pandas as pd
-import numpy as np
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from src.utils.lazy_imports import get_numpy, get_pandas, get_scipy_stats, get_matplotlib, get_matplotlib_figure, get_matplotlib_backend
 from typing import List, Dict
 
 from src.analytics.cov.cov_utils import (
@@ -28,9 +25,41 @@ from src.analytics.cov.cov_utils import (
 )
 
 
+
+
+# Lazy-loaded libraries
+_pd = None
+_np = None
+_stats = None
+_plt = None
+_Figure = None
+_FigureCanvasTkAgg = None
+
+def _ensure_libs():
+    """Carrega bibliotecas pesadas apenas quando necessário"""
+    global _pd, _np, _stats, _plt, _Figure, _FigureCanvasTkAgg
+    if _pd is None:
+        _pd = get_pandas()
+        _np = get_numpy()
+        _stats = get_scipy_stats()
+        _plt = get_matplotlib()
+        _Figure = get_matplotlib_figure()
+        _FigureCanvasTkAgg = get_matplotlib_backend()
+    return _pd, _np, _stats, _plt, _Figure, _FigureCanvasTkAgg
+
+
 class CovEmsWindow(ctk.CTkToplevel):
-    def __init__(self, parent, df: pd.DataFrame):
+    def __init__(self, parent, df):
         super().__init__(parent)
+
+        # Carrega bibliotecas pesadas (lazy)
+        pd, np, stats, plt, Figure, FigureCanvasTkAgg = _ensure_libs()
+        self.pd = pd
+        self.np = np
+        self.stats = stats
+        self.plt = plt
+        self.Figure = Figure
+        self.FigureCanvasTkAgg = FigureCanvasTkAgg
         
         self.df = df
         self.results = None
@@ -302,7 +331,7 @@ class CovEmsWindow(ctk.CTkToplevel):
         finally:
             self.calculate_btn.configure(state="normal", text="🔍 Calcular COV EMS")
     
-    def calculate_crossed(self, df: pd.DataFrame, x_cols: List[str], y_col: str) -> Dict:
+    def calculate_crossed(self, df, x_cols: List[str], y_col: str) -> Dict:
         """Calculate crossed (factorial) analysis"""
         # Prepare data
         analysis_df = df[x_cols + [y_col]].copy()
@@ -408,7 +437,7 @@ class CovEmsWindow(ctk.CTkToplevel):
             "variances": variances
         }
     
-    def calculate_nested(self, df: pd.DataFrame, x_cols: List[str], y_col: str) -> Dict:
+    def calculate_nested(self, df, x_cols: List[str], y_col: str) -> Dict:
         """Calculate nested (hierarchical) analysis"""
         analysis_df = df[x_cols + [y_col]].copy()
         analysis_df = analysis_df.dropna()
@@ -417,7 +446,7 @@ class CovEmsWindow(ctk.CTkToplevel):
         columns_x = x_cols.copy()
         
         # Add line index
-        line_quantity = list(np.arange(0, len(analysis_df)))
+        line_quantity = list(self.np.arange(0, len(analysis_df)))
         analysis_df.insert(len(columns), "line", line_quantity)
         
         # Calculate mean and amplitude
@@ -681,7 +710,7 @@ class CovEmsWindow(ctk.CTkToplevel):
             values = list(values) + [total_row["total"] if isinstance(total_row["total"], (int, float)) else 0]
         
         # Create chart
-        fig = Figure(figsize=(6, 5), dpi=100)
+        fig = self.Figure(figsize=(6, 5), dpi=100)
         ax = fig.add_subplot(111)
         
         colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE']
@@ -706,7 +735,7 @@ class CovEmsWindow(ctk.CTkToplevel):
         
         fig.tight_layout()
         
-        canvas = FigureCanvasTkAgg(fig, chart_frame)
+        canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
     

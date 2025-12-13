@@ -4,12 +4,7 @@ Allows user to perform Cp/Cpk and Pp/Ppk analysis on selected data
 """
 import customtkinter as ctk
 from tkinter import messagebox
-import pandas as pd
-import numpy as np
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import matplotlib.pyplot as plt
-from scipy.stats import chi2, weibull_min, norm
+from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib, get_scipy_stats
 
 from .capability_utils import (
     calculate_pp_ppk,
@@ -28,10 +23,46 @@ from .capability_utils import (
     fit_weibull,
 )
 
+# Lazy-loaded libraries (carregadas apenas quando window é criada)
+_pd = None
+_np = None
+_plt = None
+_Figure = None
+_FigureCanvasTkAgg = None
+_chi2 = None
+_weibull_min = None
+_norm = None
+
+def _ensure_libs():
+    """Garante que bibliotecas pesadas estão carregadas"""
+    global _pd, _np, _plt, _Figure, _FigureCanvasTkAgg, _chi2, _weibull_min, _norm
+    if _pd is None:
+        _pd = get_pandas()
+        _np = get_numpy()
+        _plt = get_matplotlib()
+        _Figure = get_matplotlib_figure()
+        _FigureCanvasTkAgg = get_matplotlib_backend()
+        stats = get_scipy_stats()
+        _chi2 = stats.chi2
+        _weibull_min = stats.weibull_min
+        _norm = stats.norm
+    return _pd, _np, _plt, _Figure, _FigureCanvasTkAgg, _chi2, _weibull_min, _norm
+
 
 class CapabilityWindow(ctk.CTkToplevel):
-    def __init__(self, parent, df: pd.DataFrame):
+    def __init__(self, parent, df):
         super().__init__(parent)
+        
+        # Carrega bibliotecas pesadas (lazy)
+        pd, np, plt, Figure, FigureCanvasTkAgg, chi2, weibull_min, norm = _ensure_libs()
+        self.pd = pd
+        self.np = np
+        self.plt = plt
+        self.Figure = Figure
+        self.FigureCanvasTkAgg = FigureCanvasTkAgg
+        self.chi2 = chi2
+        self.weibull_min = weibull_min
+        self.norm = norm
         
         self.df = df
         self.results = None
@@ -342,7 +373,7 @@ class CapabilityWindow(ctk.CTkToplevel):
         finally:
             self.calculate_btn.configure(state="normal", text="🔍 Calcular Capacidade")
     
-    def calculate_normal(self, df: pd.DataFrame, lse: float, lie: float, tolerance_type: str):
+    def calculate_normal(self, df, lse: float, lie: float, tolerance_type: str):
         """Calculate capability for normal distribution without phase"""
         # Calcula PP e PPK
         pp, ppk, ppu, ppl = calculate_pp_ppk(lse, lie, df)
@@ -366,8 +397,8 @@ class CapabilityWindow(ctk.CTkToplevel):
         ppk_upper = calculate_superior_limit(ppk, observations)
         
         degress = observations - 1
-        quiqua_0975 = chi2.ppf(0.975, degress)
-        quiqua_0025 = chi2.ppf(0.025, degress)
+        quiqua_0975 = self.chi2.ppf(0.975, degress)
+        quiqua_0025 = self.chi2.ppf(0.025, degress)
         se = calculate_se(observations, within_sigma, lie, lse, mean)
         
         cp_lower = cp * ((observations - 1) / quiqua_0975) ** 0.5
@@ -431,13 +462,13 @@ class CapabilityWindow(ctk.CTkToplevel):
             "mr_data": mr_data
         }
     
-    def calculate_not_normal(self, df: pd.DataFrame, lse: float, lie: float, tolerance_type: str):
+    def calculate_not_normal(self, df, lse: float, lie: float, tolerance_type: str):
         """Calculate capability for non-normal distribution without phase"""
         col = df.iloc[:, 0]
         
-        P99865 = np.percentile(col, 99.865)
-        P000135 = np.percentile(col, 0.135)
-        P50 = np.percentile(col, 50)
+        P99865 = self.np.percentile(col, 99.865)
+        P000135 = self.np.percentile(col, 0.135)
+        P50 = self.np.percentile(col, 50)
         
         mean, within_sigma, overall_sigma, stability = calculate_process_summary(df)
         
@@ -450,12 +481,12 @@ class CapabilityWindow(ctk.CTkToplevel):
         
         # Calculate PPM
         if tolerance_type == "superiorUnilateral":
-            ppm = (1 - weibull_min.cdf(lse, c=shape, scale=scale)) * 1000000
+            ppm = (1 - self.weibull_min.cdf(lse, c=shape, scale=scale)) * 1000000
         elif tolerance_type == "inferiorUnilateral":
-            ppm = weibull_min.cdf(lie, c=shape, scale=scale) * 1000000
+            ppm = self.weibull_min.cdf(lie, c=shape, scale=scale) * 1000000
         else:
-            ppm_upper = (1 - weibull_min.cdf(lse, c=shape, scale=scale)) * 1000000
-            ppm_lower = weibull_min.cdf(lie, c=shape, scale=scale) * 1000000
+            ppm_upper = (1 - self.weibull_min.cdf(lse, c=shape, scale=scale)) * 1000000
+            ppm_lower = self.weibull_min.cdf(lie, c=shape, scale=scale) * 1000000
             ppm = ppm_upper + ppm_lower
         
         observations = df.shape[0]
@@ -482,7 +513,7 @@ class CapabilityWindow(ctk.CTkToplevel):
             "P000135": P000135
         }
     
-    def calculate_normal_with_phase(self, df: pd.DataFrame, lse: float, lie: float, tolerance_type: str):
+    def calculate_normal_with_phase(self, df, lse: float, lie: float, tolerance_type: str):
         """Calculate capability for normal distribution with phase"""
         # Split by phase
         split_dfs = data_frame_split_by_columns(df)
@@ -490,7 +521,7 @@ class CapabilityWindow(ctk.CTkToplevel):
         results_by_phase = {}
         
         for split_df in split_dfs:
-            split_df = pd.DataFrame(split_df)
+            split_df = self.pd.DataFrame(split_df)
             first_value = str(split_df.iloc[0, 0])
             phase_col = split_df.columns[0]
             
@@ -540,23 +571,23 @@ class CapabilityWindow(ctk.CTkToplevel):
             "tolerance_type": tolerance_type
         }
     
-    def calculate_not_normal_with_phase(self, df: pd.DataFrame, lse: float, lie: float, tolerance_type: str):
+    def calculate_not_normal_with_phase(self, df, lse: float, lie: float, tolerance_type: str):
         """Calculate capability for non-normal distribution with phase"""
         split_dfs = data_frame_split_by_columns(df)
         
         results_by_phase = {}
         
         for split_df in split_dfs:
-            split_df = pd.DataFrame(split_df)
+            split_df = self.pd.DataFrame(split_df)
             first_value = str(split_df.iloc[0, 0])
             phase_col = split_df.columns[0]
             
             remove_last_column(split_df, phase_col)
             
             col = split_df.iloc[:, 0]
-            P50 = np.percentile(col, 50)
-            P99865 = np.percentile(col, 99.865)
-            P000135 = np.percentile(col, 0.135)
+            P50 = self.np.percentile(col, 50)
+            P99865 = self.np.percentile(col, 99.865)
+            P000135 = self.np.percentile(col, 0.135)
             
             mean, within_sigma, overall_sigma, stability = calculate_process_summary(split_df)
             
@@ -572,12 +603,12 @@ class CapabilityWindow(ctk.CTkToplevel):
             shape, scale = fit_weibull(col.tolist())
             
             if tolerance_type == "superiorUnilateral":
-                ppm = (1 - weibull_min.cdf(lse, c=shape, scale=scale)) * 1000000
+                ppm = (1 - self.weibull_min.cdf(lse, c=shape, scale=scale)) * 1000000
             elif tolerance_type == "inferiorUnilateral":
-                ppm = weibull_min.cdf(lie, c=shape, scale=scale) * 1000000
+                ppm = self.weibull_min.cdf(lie, c=shape, scale=scale) * 1000000
             else:
-                ppm_upper = (1 - weibull_min.cdf(lse, c=shape, scale=scale)) * 1000000
-                ppm_lower = weibull_min.cdf(lie, c=shape, scale=scale) * 1000000
+                ppm_upper = (1 - self.weibull_min.cdf(lse, c=shape, scale=scale)) * 1000000
+                ppm_lower = self.weibull_min.cdf(lie, c=shape, scale=scale) * 1000000
                 ppm = ppm_upper + ppm_lower
             
             phase_key = f"{phase_col}_{first_value}"
@@ -1000,7 +1031,7 @@ class CapabilityWindow(ctk.CTkToplevel):
         ucl_mr = mr_data['ucl_mr']
         lcl_mr = mr_data['lcl_mr']
         
-        fig = Figure(figsize=(6, 3.5), dpi=100)
+        fig = self.Figure(figsize=(6, 3.5), dpi=100)
         ax = fig.add_subplot(111)
         
         observations = list(range(1, len(moving_range) + 1))
@@ -1020,7 +1051,7 @@ class CapabilityWindow(ctk.CTkToplevel):
         ax.legend(fontsize=8, loc='best')
         ax.grid(True, alpha=0.3)
         
-        canvas = FigureCanvasTkAgg(fig, chart_frame)
+        canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=5)
     
@@ -1043,7 +1074,7 @@ class CapabilityWindow(ctk.CTkToplevel):
         lse = self.results["lse"]
         lie = self.results["lie"]
         
-        fig = Figure(figsize=(6, 3.5), dpi=100)
+        fig = self.Figure(figsize=(6, 3.5), dpi=100)
         ax = fig.add_subplot(111)
         
         observations = list(range(1, len(y_values) + 1))
@@ -1067,7 +1098,7 @@ class CapabilityWindow(ctk.CTkToplevel):
         ax.legend(fontsize=7, loc='best', ncol=2)
         ax.grid(True, alpha=0.3)
         
-        canvas = FigureCanvasTkAgg(fig, chart_frame)
+        canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=5)
     
@@ -1083,7 +1114,7 @@ class CapabilityWindow(ctk.CTkToplevel):
         ).pack(pady=5)
         
         # Create matplotlib figure
-        fig = Figure(figsize=(6, 4), dpi=100)
+        fig = self.Figure(figsize=(6, 4), dpi=100)
         ax = fig.add_subplot(111)
         
         y_values = self.results["y_values"]
@@ -1096,8 +1127,8 @@ class CapabilityWindow(ctk.CTkToplevel):
         # Normal curve using Overall Sigma
         mu = self.results["mean"]
         sigma = self.results["overall_sigma"]
-        x = np.linspace(min(y_values), max(y_values), 100)
-        ax.plot(x, norm.pdf(x, mu, sigma), 'r-', linewidth=2, label='Distribuição Normal')
+        x = self.np.linspace(min(y_values), max(y_values), 100)
+        ax.plot(x, self.norm.pdf(x, mu, sigma), 'r-', linewidth=2, label='Distribuição Normal')
         
         # Specification limits
         ax.axvline(lse, color='red', linestyle='--', linewidth=2, label=f'LSE = {lse}')
@@ -1110,7 +1141,7 @@ class CapabilityWindow(ctk.CTkToplevel):
         ax.grid(True, alpha=0.3)
         
         # Embed in tkinter
-        canvas = FigureCanvasTkAgg(fig, chart_frame)
+        canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
     
@@ -1125,7 +1156,7 @@ class CapabilityWindow(ctk.CTkToplevel):
             font=ctk.CTkFont(size=14, weight="bold")
         ).pack(pady=5)
         
-        fig = Figure(figsize=(6, 4), dpi=100)
+        fig = self.Figure(figsize=(6, 4), dpi=100)
         ax = fig.add_subplot(111)
         
         if self.results["type"] == "normal":
@@ -1164,7 +1195,7 @@ class CapabilityWindow(ctk.CTkToplevel):
         ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3, axis='y')
         
-        canvas = FigureCanvasTkAgg(fig, chart_frame)
+        canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
     
@@ -1179,7 +1210,7 @@ class CapabilityWindow(ctk.CTkToplevel):
             font=ctk.CTkFont(size=14, weight="bold")
         ).pack(pady=5)
         
-        fig = Figure(figsize=(6, 4), dpi=100)
+        fig = self.Figure(figsize=(6, 4), dpi=100)
         ax = fig.add_subplot(111)
         
         y_values = phase_data["y_values"]
@@ -1190,8 +1221,8 @@ class CapabilityWindow(ctk.CTkToplevel):
         
         mu = phase_data["mean"]
         sigma = phase_data["overall_sigma"]
-        x = np.linspace(min(y_values), max(y_values), 100)
-        ax.plot(x, norm.pdf(x, mu, sigma), 'r-', linewidth=2, label='Distribuição')
+        x = self.np.linspace(min(y_values), max(y_values), 100)
+        ax.plot(x, self.norm.pdf(x, mu, sigma), 'r-', linewidth=2, label='Distribuição')
         
         ax.axvline(lse, color='red', linestyle='--', linewidth=2, label=f'LSE = {lse}')
         ax.axvline(lie, color='red', linestyle='--', linewidth=2, label=f'LIE = {lie}')
@@ -1203,7 +1234,7 @@ class CapabilityWindow(ctk.CTkToplevel):
         ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
         
-        canvas = FigureCanvasTkAgg(fig, chart_frame)
+        canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
     
@@ -1224,7 +1255,7 @@ class CapabilityWindow(ctk.CTkToplevel):
             moving_range.append(mr)
         
         # MRbar (average of moving ranges)
-        mr_bar = np.mean(moving_range) if moving_range else 0
+        mr_bar = self.np.mean(moving_range) if moving_range else 0
         
         # Constants for subgroup size = 2
         d2 = 1.128

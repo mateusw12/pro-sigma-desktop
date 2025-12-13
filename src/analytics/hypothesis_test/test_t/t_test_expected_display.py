@@ -2,9 +2,7 @@
 t-Test with Expected Mean Display
 """
 import customtkinter as ctk
-import numpy as np
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from src.utils.lazy_imports import get_numpy, get_matplotlib_figure, get_matplotlib_backend
 from typing import Dict
 
 
@@ -41,6 +39,11 @@ def display_t_test_expected_results(parent, results: Dict):
 
 def display_histogram(parent, result: Dict, response_name: str):
     """Display histogram with expected mean line"""
+    # Carrega bibliotecas lazy
+    np = get_numpy()
+    Figure = get_matplotlib_figure()
+    FigureCanvasTkAgg = get_matplotlib_backend()
+    
     chart_frame = ctk.CTkFrame(parent)
     chart_frame.pack(fill="both", expand=True)
     

@@ -307,7 +307,7 @@ class HomePage(ctk.CTkFrame):
         self.create_tool_buttons()
     
     def create_tool_buttons(self):
-        """Cria botões para as ferramentas disponíveis"""
+        """Cria botões para as ferramentas disponíveis (otimizado)"""
         
         # Definição das ferramentas
         tools_definition = {
@@ -445,110 +445,127 @@ class HomePage(ctk.CTkFrame):
                 category = plan_to_category.get(tool_info['plan'], 'Básico')
                 categories[category].append((feature_id, tool_info))
         
-        # Cria seção para cada categoria que tenha ferramentas
-        for category_name, tools_list in categories.items():
-            if not tools_list:
-                continue
-                
-            # Header da categoria
-            category_header = ctk.CTkFrame(self.tools_scroll, fg_color="transparent")
-            category_header.pack(fill="x", pady=(15, 10), padx=5)
+        # Cria seção para cada categoria que tenha ferramentas (otimizado)
+        # Usa after() para criar widgets de forma não-bloqueante
+        self._create_categories_async(list(categories.items()), 0)
+    
+    def _create_categories_async(self, categories_items, index):
+        """Cria categorias de forma assíncrona para não travar a UI"""
+        if index >= len(categories_items):
+            return
+        
+        category_name, tools_list = categories_items[index]
+        
+        if tools_list:
+            self._create_category(category_name, tools_list)
+        
+        # Agenda criação da próxima categoria
+        if index + 1 < len(categories_items):
+            self.after(5, lambda: self._create_categories_async(categories_items, index + 1))
+    
+    def _create_category(self, category_name, tools_list):
+        """Cria uma categoria de ferramentas"""
+        # Header da categoria
+        category_header = ctk.CTkFrame(self.tools_scroll, fg_color="transparent")
+        category_header.pack(fill="x", pady=(15, 10), padx=5)
+        
+        category_label = ctk.CTkLabel(
+            category_header,
+            text=f"■ {category_name}",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color="#2E86DE",
+            anchor="w"
+        )
+        category_label.pack(side="left")
+        
+        # Grid de ferramentas desta categoria
+        row_frame = None
+        col_count = 0
+        max_cols = 3  # 3 cards por linha
+        
+        # Ícones pré-definidos para evitar recriação
+        icon_map = {
+            'variability': '📊', 'process_capability': '📈', 'hypothesis_test': '🔬',
+            'distribution_test': '📉', 'cov_ems': '📐', 'distribution_analysis': '📊',
+            'analytics': '🔍', 'text_analysis': '📝', 'normalization_test': '✓',
+            'control_charts': '📊', 'dashboard': '📊', 'monte_carlo': '🎲',
+            'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '🔄',
+            'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'warranty_costs': '💰',
+            'neural_networks': '🧠', 'decision_tree': '🌳', 'descriptive_stats': '📊'
+        }
+        
+        for idx, (feature_id, tool_info) in enumerate(tools_list):
+            # Cria nova linha a cada max_cols cards
+            if col_count == 0:
+                row_frame = ctk.CTkFrame(self.tools_scroll, fg_color="transparent")
+                row_frame.pack(fill="x", pady=5)
             
-            category_label = ctk.CTkLabel(
-                category_header,
-                text=f"■ {category_name}",
-                font=ctk.CTkFont(size=14, weight="bold"),
-                text_color="#2E86DE",
-                anchor="w"
-            )
-            category_label.pack(side="left")
+            # Card da ferramenta (simplificado para melhor performance)
+            tool_card = self._create_tool_card(row_frame, feature_id, tool_info, icon_map)
             
-            # Grid de ferramentas desta categoria
-            row_frame = None
-            col_count = 0
-            max_cols = 3  # 3 cards por linha
-            
-            for idx, (feature_id, tool_info) in enumerate(tools_list):
-                # Cria nova linha a cada max_cols cards
-                if col_count == 0:
-                    row_frame = ctk.CTkFrame(self.tools_scroll, fg_color="transparent")
-                    row_frame.pack(fill="x", pady=5)
-                
-                # Card da ferramenta
-                tool_card = ctk.CTkFrame(row_frame, corner_radius=10, border_width=1, border_color="gray25")
-                tool_card.pack(side="left", fill="both", expand=True, padx=5, pady=5)
-                
-                # Efeito hover (simulado com bind)
-                def on_enter(event, card=tool_card):
-                    card.configure(border_color="#2E86DE")
-                
-                def on_leave(event, card=tool_card):
-                    card.configure(border_color="gray25")
-                
-                tool_card.bind("<Enter>", on_enter)
-                tool_card.bind("<Leave>", on_leave)
-            
-                # Container interno do card
-                card_content = ctk.CTkFrame(tool_card, fg_color="transparent")
-                card_content.pack(fill="both", expand=True, padx=15, pady=12)
-                
-                # Ícone/Badge grande no topo
-                icon_map = {
-                    'variability': '📊', 'process_capability': '📈', 'hypothesis_test': '🔬',
-                    'distribution_test': '📉', 'cov_ems': '📐', 'distribution_analysis': '📊',
-                    'analytics': '🔍', 'text_analysis': '📝', 'normalization_test': '✓',
-                    'control_charts': '📊', 'dashboard': '📊', 'monte_carlo': '🎲', 'cov_ems': '🎲',
-                    'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '🔄',
-                    'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'warranty_costs': '💰',
-                    'neural_networks': '🧠', 'decision_tree': '🌳', 'descriptive_stats': '📊'
-                }
-                icon = icon_map.get(feature_id, '🔧')
-                
-                icon_label = ctk.CTkLabel(
-                    card_content,
-                    text=icon,
-                    font=ctk.CTkFont(size=32)
-                )
-                icon_label.pack(pady=(5, 8))
-                
-                # Título da ferramenta
-                title_label = ctk.CTkLabel(
-                    card_content,
-                    text=tool_info['title'],
-                    font=ctk.CTkFont(size=13, weight="bold"),
-                    anchor="center",
-                    wraplength=200
-                )
-                title_label.pack(pady=(0, 6))
-                
-                # Descrição
-                desc_label = ctk.CTkLabel(
-                    card_content,
-                    text=tool_info['description'],
-                    font=ctk.CTkFont(size=10),
-                    text_color="gray60",
-                    anchor="center",
-                    wraplength=200,
-                    height=40
-                )
-                desc_label.pack(pady=(0, 10))
-                
-                # Botão de ação compacto
-                action_btn = ctk.CTkButton(
-                    card_content,
-                    text="Abrir →",
-                    command=lambda fid=feature_id: self.open_tool(fid),
-                    height=32,
-                    font=ctk.CTkFont(size=11, weight="bold"),
-                    fg_color="#2E86DE",
-                    hover_color="#1E5BA8",
-                    corner_radius=6
-                )
-                action_btn.pack(fill="x")
-                
-                col_count += 1
-                if col_count >= max_cols:
-                    col_count = 0
+            col_count += 1
+            if col_count >= max_cols:
+                col_count = 0
+    
+    def _create_tool_card(self, parent, feature_id, tool_info, icon_map):
+        """Cria um card de ferramenta otimizado"""
+        # Card da ferramenta
+        tool_card = ctk.CTkFrame(parent, corner_radius=10, border_width=1, border_color="gray25")
+        tool_card.pack(side="left", fill="both", expand=True, padx=5, pady=5)
+        
+        # Efeito hover otimizado (usando lambda para evitar múltiplas funções)
+        tool_card.bind("<Enter>", lambda e: tool_card.configure(border_color="#2E86DE"))
+        tool_card.bind("<Leave>", lambda e: tool_card.configure(border_color="gray25"))
+        
+        # Container interno do card
+        card_content = ctk.CTkFrame(tool_card, fg_color="transparent")
+        card_content.pack(fill="both", expand=True, padx=15, pady=12)
+        
+        # Ícone
+        icon = icon_map.get(feature_id, '🔧')
+        icon_label = ctk.CTkLabel(
+            card_content,
+            text=icon,
+            font=ctk.CTkFont(size=32)
+        )
+        icon_label.pack(pady=(5, 8))
+        
+        # Título da ferramenta
+        title_label = ctk.CTkLabel(
+            card_content,
+            text=tool_info['title'],
+            font=ctk.CTkFont(size=13, weight="bold"),
+            anchor="center",
+            wraplength=200
+        )
+        title_label.pack(pady=(0, 6))
+        
+        # Descrição
+        desc_label = ctk.CTkLabel(
+            card_content,
+            text=tool_info['description'],
+            font=ctk.CTkFont(size=10),
+            text_color="gray60",
+            anchor="center",
+            wraplength=200,
+            height=40
+        )
+        desc_label.pack(pady=(0, 10))
+        
+        # Botão de ação compacto
+        action_btn = ctk.CTkButton(
+            card_content,
+            text="Abrir →",
+            command=lambda fid=feature_id: self.open_tool(fid),
+            height=32,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="#2E86DE",
+            hover_color="#1E5BA8",
+            corner_radius=6
+        )
+        action_btn.pack(fill="x")
+        
+        return tool_card
     
     def import_excel(self):
         """Importa arquivo Excel"""

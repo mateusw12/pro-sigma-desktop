@@ -5,19 +5,25 @@ Configurações de Performance para Pro Sigma
 # Configurações de otimização de interface
 PERFORMANCE_CONFIG = {
     # Desabilita animações complexas para melhor performance
-    'disable_animations': False,
+    'disable_animations': True,
     
     # Tempo de debounce para eventos de redimensionamento (ms)
-    'resize_debounce': 200,
+    'resize_debounce': 100,
     
     # Número máximo de widgets visíveis simultaneamente no scroll
-    'max_visible_widgets': 30,
+    'max_visible_widgets': 20,
     
     # Usa double buffering para evitar flickering
     'use_double_buffer': True,
     
     # Lazy loading de componentes pesados
     'lazy_load_charts': True,
+    
+    # Lazy import de bibliotecas pesadas (melhora tempo de inicialização)
+    'lazy_imports': True,
+    
+    # Virtualização de scroll (renderiza apenas visíveis)
+    'virtualize_scroll': True,
     
     # Cache de widgets criados
     'cache_widgets': True,

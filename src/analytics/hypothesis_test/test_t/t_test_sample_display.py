@@ -2,9 +2,7 @@
 t-Test Sample Display
 """
 import customtkinter as ctk
-import numpy as np
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from src.utils.lazy_imports import get_matplotlib_figure, get_matplotlib_backend
 from typing import Dict
 
 
@@ -50,6 +48,10 @@ def display_one_sample_results(parent, result: Dict):
 
 def display_one_sample_chart(parent, result: Dict):
     """Display histogram for one-sample test"""
+    # Carrega bibliotecas lazy
+    Figure = get_matplotlib_figure()
+    FigureCanvasTkAgg = get_matplotlib_backend()
+    
     chart_frame = ctk.CTkFrame(parent)
     chart_frame.pack(fill="both", expand=True)
     
@@ -180,6 +182,10 @@ def display_paired_sample_results(parent, result: Dict):
 
 def display_paired_sample_chart(parent, result: Dict):
     """Display histogram for paired-sample test"""
+    # Carrega bibliotecas lazy
+    Figure = get_matplotlib_figure()
+    FigureCanvasTkAgg = get_matplotlib_backend()
+    
     chart_frame = ctk.CTkFrame(parent)
     chart_frame.pack(fill="both", expand=True)
     

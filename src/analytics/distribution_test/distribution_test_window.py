@@ -7,19 +7,15 @@ Distribution Fit Test Window
 """
 import customtkinter as ctk
 from tkinter import ttk, messagebox
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from scipy import stats
+from src.utils.lazy_imports import get_numpy, get_pandas, get_scipy_stats, get_matplotlib, get_matplotlib_figure, get_matplotlib_backend
 
 
 CANDIDATES = {
-    "Normal": stats.norm,
-    "Lognormal": stats.lognorm,  # shape, loc, scale (shape=sigma)
-    "Weibull": stats.weibull_min,  # shape=k, loc, scale
-    "Exponential": stats.expon,  # loc, scale
-    "Gamma": stats.gamma,  # a, loc, scale
+    "Normal": self.stats.norm,
+    "Lognormal": self.stats.lognorm,  # shape, loc, scale (shape=sigma)
+    "Weibull": self.stats.weibull_min,  # shape=k, loc, scale
+    "Exponential": self.stats.expon,  # loc, scale
+    "Gamma": self.stats.gamma,  # a, loc, scale
 }
 
 
@@ -28,12 +24,44 @@ def compute_aic(n, loglik, k):
 
 
 def compute_bic(n, loglik, k):
-    return k * np.log(n) - 2 * loglik
+    return k * self.np.log(n) - 2 * loglik
+
+
+
+
+# Lazy-loaded libraries
+_pd = None
+_np = None
+_stats = None
+_plt = None
+_Figure = None
+_FigureCanvasTkAgg = None
+
+def _ensure_libs():
+    """Carrega bibliotecas pesadas apenas quando necessário"""
+    global _pd, _np, _stats, _plt, _Figure, _FigureCanvasTkAgg
+    if _pd is None:
+        _pd = get_pandas()
+        _np = get_numpy()
+        _stats = get_scipy_stats()
+        _plt = get_matplotlib()
+        _Figure = get_matplotlib_figure()
+        _FigureCanvasTkAgg = get_matplotlib_backend()
+    return _pd, _np, _stats, _plt, _Figure, _FigureCanvasTkAgg
 
 
 class DistributionTestWindow(ctk.CTkToplevel):
-    def __init__(self, parent, df: pd.DataFrame):
+    def __init__(self, parent, df):
         super().__init__(parent)
+
+        # Carrega bibliotecas pesadas (lazy)
+        pd, np, stats, plt, Figure, FigureCanvasTkAgg = _ensure_libs()
+        self.pd = pd
+        self.np = np
+        self.stats = stats
+        self.plt = plt
+        self.Figure = Figure
+        self.FigureCanvasTkAgg = FigureCanvasTkAgg
         self.title("Distribution Fit Test")
         self.geometry("1000x700")
         self.minsize(800, 550)
@@ -115,8 +143,8 @@ class DistributionTestWindow(ctk.CTkToplevel):
 
         self.plot_frame = ctk.CTkFrame(right)
         self.plot_frame.pack(fill="both", expand=True, padx=8, pady=(0, 8))
-        self.figure, self.ax = plt.subplots(figsize=(8, 5))
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self.plot_frame)
+        self.figure, self.ax = self.plt.subplots(figsize=(8, 5))
+        self.canvas = self.FigureCanvasTkAgg(self.figure, master=self.plot_frame)
         self.canvas.get_tk_widget().pack(fill="both", expand=True)
         self.figure.tight_layout()
 
@@ -146,7 +174,7 @@ class DistributionTestWindow(ctk.CTkToplevel):
         # Histogram
         self.ax.hist(vals, bins=20, density=True, alpha=0.35, color="#2E86DE", label=f"Histogram: {first_col}")
 
-        xgrid = np.linspace(np.nanmin(vals), np.nanmax(vals), 300)
+        xgrid = self.np.linspace(self.np.nanmin(vals), self.np.nanmax(vals), 300)
 
         # Fit each selected distribution for each Y, fill table; plot for first Y
         for col in y_cols:
@@ -160,13 +188,13 @@ class DistributionTestWindow(ctk.CTkToplevel):
                 try:
                     params = dist.fit(data)
                     logpdf = dist.logpdf(data, *params)
-                    loglik = float(np.sum(logpdf))
+                    loglik = float(self.np.sum(logpdf))
                     k = len(params)
                     aic = compute_aic(n, loglik, k)
                     bic = compute_bic(n, loglik, k)
 
                     # Params pretty
-                    ptxt = ", ".join([f"{p:.4g}" if isinstance(p, (int, float, np.floating)) else str(p) for p in params])
+                    ptxt = ", ".join([f"{p:.4g}" if isinstance(p, (int, float, self.np.floating)) else str(p) for p in params])
                     self.tree.insert("", "end", values=[col, dist_name, ptxt, f"{loglik:.4g}", f"{aic:.4g}", f"{bic:.4g}"])
 
                     # Plot only for first column to keep chart readable

@@ -2,9 +2,7 @@
 One-Way ANOVA Display
 """
 import customtkinter as ctk
-import numpy as np
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from src.utils.lazy_imports import get_numpy, get_matplotlib_figure, get_matplotlib_backend
 from typing import Dict
 
 
@@ -57,6 +55,11 @@ def display_anova_for_response(parent, result_data: Dict, response_name: str):
 
 def display_anova_chart(parent, result_data: Dict, response_name: str):
     """Display scatter plot with mean line"""
+    # Carrega bibliotecas lazy
+    np = get_numpy()
+    Figure = get_matplotlib_figure()
+    FigureCanvasTkAgg = get_matplotlib_backend()
+    
     chart_frame = ctk.CTkFrame(parent)
     chart_frame.pack(fill="both", expand=True)
     

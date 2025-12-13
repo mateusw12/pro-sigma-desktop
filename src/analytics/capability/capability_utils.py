@@ -3,12 +3,31 @@ Utility functions for Process Capability calculations
 Adapted from FastAPI backend for desktop application
 """
 from typing import List, Tuple
-import numpy as np
-import pandas as pd
-from scipy.stats import norm, weibull_min, chi2
+from src.utils.lazy_imports import get_numpy, get_pandas, get_scipy_stats
+
+# Lazy imports - carregados apenas quando usados
+np = None
+pd = None
+norm = None
+weibull_min = None
+chi2 = None
+
+def _ensure_imports():
+    """Garante que imports pesados estão carregados"""
+    global np, pd, norm, weibull_min, chi2
+    if np is None:
+        np = get_numpy()
+    if pd is None:
+        pd = get_pandas()
+    if norm is None:
+        stats = get_scipy_stats()
+        norm = stats.norm
+        weibull_min = stats.weibull_min
+        chi2 = stats.chi2
+    return np, pd, norm, weibull_min, chi2
 
 
-def data_frame_split_by_columns(df: pd.DataFrame):
+def data_frame_split_by_columns(df):
     """Separa um DataFrame em múltiplos DataFrames com base nos valores únicos da primeira coluna."""
     first_column_name = df.columns[0]
     unique_values = df[first_column_name].unique()
@@ -19,13 +38,14 @@ def data_frame_split_by_columns(df: pd.DataFrame):
     return split_data_frames
 
 
-def remove_last_column(df: pd.DataFrame, last_column: str):
+def remove_last_column(df, last_column: str):
     """Remove a última coluna de um DataFrame com base no nome da coluna fornecido."""
     df.drop(columns=[last_column], inplace=True)
 
 
-def calculate_pp_ppk(lse: float, lie: float, split_df: pd.DataFrame):
+def calculate_pp_ppk(lse: float, lie: float, split_df):
     """Calcula o Índice de Capacidade do Processo (PP) e o Índice de Capacidade do Processo Ajustado (PPK)."""
+    _ensure_imports()
     mean = split_df.mean().iloc[0]
     col = split_df.iloc[:, 0]
     std = np.std(col, ddof=1)
@@ -44,8 +64,9 @@ def calculate_pp(lse: float, lie: float, mean: float, std: float):
     return ppu, ppl
 
 
-def calculate_cp_cpk(lse: float, lie: float, split_df: pd.DataFrame, within_sigma: float):
+def calculate_cp_cpk(lse: float, lie: float, split_df, within_sigma: float):
     """Calcula os índices de capacidade do processo (CP) e capacidade do processo ajustado (CPK)."""
+    _ensure_imports()
     mean = split_df.mean().iloc[0]
     cp = (lse - lie) / (6 * within_sigma)
     cpl, cpu = calculate_cpk(lse, lie, mean, within_sigma)
@@ -67,8 +88,9 @@ def calculate_cpk(lse: float, lie: float, mean: float, ranges: float):
     return cpl, cpu
 
 
-def calculate_process_summary(split_df: pd.DataFrame):
+def calculate_process_summary(split_df):
     """Calcula o resumo do processo, incluindo a média, sigma dentro do processo, sigma geral e estabilidade."""
+    _ensure_imports()
     col_name = split_df.columns[0]
     col = split_df[col_name]
     std = np.std(col, ddof=1)
@@ -84,8 +106,9 @@ def calculate_process_summary(split_df: pd.DataFrame):
     return mean, within_sigma, overall_sigma, stability
 
 
-def calculate_moving_ranges(df: pd.DataFrame):
+def calculate_moving_ranges(df):
     """Calcula as variações móveis (diferenças absolutas entre valores consecutivos) para a primeira coluna do DataFrame."""
+    _ensure_imports()
     moving_range = []
     col_name = df.columns[0]
     col = df[col_name]

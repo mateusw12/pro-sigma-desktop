@@ -2,8 +2,7 @@
 Mean Difference Test Display
 """
 import customtkinter as ctk
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from src.utils.lazy_imports import get_matplotlib_figure, get_matplotlib_backend
 from typing import Dict
 
 
@@ -106,6 +105,10 @@ def display_mean_difference_table(parent, result_data: Dict):
 
 def display_mean_difference_chart(parent, result_data: Dict, response_name: str):
     """Display mean difference confidence interval chart"""
+    # Carrega bibliotecas lazy
+    Figure = get_matplotlib_figure()
+    FigureCanvasTkAgg = get_matplotlib_backend()
+    
     chart_frame = ctk.CTkFrame(parent)
     chart_frame.pack(fill="both", expand=True)
     

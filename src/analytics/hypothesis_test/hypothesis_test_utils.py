@@ -2,16 +2,31 @@
 Hypothesis Test Utility Functions
 Statistical hypothesis testing calculations
 """
-import pandas as pd
-import numpy as np
 from typing import List, Dict
 from itertools import combinations
-from scipy.stats import t
 import string
+from src.utils.lazy_imports import get_pandas, get_numpy, get_scipy_stats
+
+# Lazy imports - carregados apenas quando usados
+pd = None
+np = None
+stats = None
+t = None
+
+def _ensure_imports():
+    """Garante que imports pesados estão carregados"""
+    global pd, np, stats, t
+    if pd is None:
+        pd = get_pandas()
+        np = get_numpy()
+        stats = get_scipy_stats()
+        t = stats.t
+    return pd, np, stats, t
 
 
-def remove_punctuation(df: pd.DataFrame) -> pd.DataFrame:
+def remove_punctuation(df):
     """Remove pontuação dos valores do DataFrame"""
+    _ensure_imports()
     return df.map(
         lambda x: (
             "".join([char for char in str(x) if char not in string.punctuation])
@@ -21,16 +36,18 @@ def remove_punctuation(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def convert_first_column_to_string(df: pd.DataFrame) -> pd.DataFrame:
+def convert_first_column_to_string(df):
     """Converte valores da primeira coluna para string"""
+    _ensure_imports()
     first_col = df.columns[0]
     if not df[first_col].apply(lambda x: isinstance(x, str)).all():
         df[first_col] = first_col + df[first_col].astype(str)
     return df.copy()
 
 
-def calculate_average_response(df: pd.DataFrame) -> Dict[str, float]:
+def calculate_average_response(df) -> Dict[str, float]:
     """Calcula a média da resposta para cada grupo"""
+    _ensure_imports()
     averages: Dict[str, float] = {}
     grouped = df.groupby(df.columns[0])
     for group_name, group_df in grouped:
@@ -39,8 +56,9 @@ def calculate_average_response(df: pd.DataFrame) -> Dict[str, float]:
     return averages
 
 
-def calculate_std_deviation(df: pd.DataFrame) -> Dict[str, float]:
+def calculate_std_deviation(df) -> Dict[str, float]:
     """Calcula o desvio padrão da resposta para cada grupo"""
+    _ensure_imports()
     std_deviation: Dict[str, float] = {}
     grouped = df.groupby(df.columns[0])
     
@@ -50,8 +68,9 @@ def calculate_std_deviation(df: pd.DataFrame) -> Dict[str, float]:
     return std_deviation
 
 
-def generate_unique_combinations(df: pd.DataFrame) -> List[str]:
+def generate_unique_combinations(df) -> List[str]:
     """Gera combinações únicas dos valores da primeira coluna"""
+    _ensure_imports()
     first_column = df.iloc[:, 0]
     unique_rows = first_column.unique()
     combinations_list = list(combinations(unique_rows, 2))
@@ -59,8 +78,9 @@ def generate_unique_combinations(df: pd.DataFrame) -> List[str]:
     return iterations
 
 
-def count_repeated_rows(df: pd.DataFrame) -> int:
+def count_repeated_rows(df) -> int:
     """Conta o número de repetições do valor mais comum na primeira coluna"""
+    _ensure_imports()
     first_column = df.iloc[:, 0]
     value_counts = first_column.value_counts()
     return value_counts.iloc[0]
@@ -74,8 +94,9 @@ def calculate_average_std_error_difference(response_values: Dict) -> float:
     return total_std_error_difference / len(response_values) if len(response_values) != 0 else 0
 
 
-def calculate_degrees_freedom(df: pd.DataFrame) -> int:
+def calculate_degrees_freedom(df) -> int:
     """Calcula graus de liberdade"""
+    _ensure_imports()
     num_rows = df.shape[0]
     return num_rows - 1
 
@@ -152,7 +173,7 @@ def calculate_ci(response_values: Dict, degrees_freedom: int) -> Dict:
     return response_values
 
 
-def calculate_mean_difference(df: pd.DataFrame, response_columns: List[str]) -> Dict:
+def calculate_mean_difference(df, response_columns: List[str]) -> Dict:
     """
     Calcula teste de diferença de média para múltiplas respostas
     
@@ -218,7 +239,7 @@ def calculate_mean_difference(df: pd.DataFrame, response_columns: List[str]) -> 
     return {"mse": mse_response}
 
 
-def calculate_one_way_anova(df: pd.DataFrame, response_columns: List[str]) -> Dict:
+def calculate_one_way_anova(df, response_columns: List[str]) -> Dict:
     """
     Calcula One-Way ANOVA para múltiplas respostas
     
@@ -381,7 +402,7 @@ def calculate_one_way_anova(df: pd.DataFrame, response_columns: List[str]) -> Di
 
 
 def calculate_t_test_expected_mean(
-    df: pd.DataFrame,
+    df,
     response_column: str,
     expected_mean: float
 ) -> Dict:
@@ -396,6 +417,8 @@ def calculate_t_test_expected_mean(
     Returns:
         Dicionário com resultados do t-test
     """
+    _ensure_imports()
+    
     if response_column not in df.columns:
         return {}
     
@@ -435,7 +458,7 @@ def calculate_t_test_expected_mean(
     }
 
 
-def calculate_t_test_sample(df: pd.DataFrame, response_columns: List[str], expected_mean: float = 0) -> Dict:
+def calculate_t_test_sample(df, response_columns: List[str], expected_mean: float = 0) -> Dict:
     """
     Calcula teste t de amostra (one-sample ou paired-sample)
     
@@ -447,6 +470,8 @@ def calculate_t_test_sample(df: pd.DataFrame, response_columns: List[str], expec
     Returns:
         Dicionário com resultados do teste t
     """
+    _ensure_imports()
+    
     df = remove_punctuation(df)
     results = {}
     

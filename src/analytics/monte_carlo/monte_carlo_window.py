@@ -7,11 +7,7 @@ Monte Carlo Simulation Window
 """
 import customtkinter as ctk
 from tkinter import ttk, messagebox, filedialog
-import pandas as pd
-import numpy as np
-from scipy import stats
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from src.utils.lazy_imports import get_pandas, get_numpy, get_scipy_stats, get_matplotlib_figure, get_matplotlib_backend
 
 
 DISTRIBUTIONS = {
