@@ -754,7 +754,7 @@ class HomePage(ctk.CTkFrame):
                 from src.analytics.capability.capability_window import CapabilityWindow
                 capability_window = CapabilityWindow(self, selected_data)
             elif feature_id == 'cov_ems':
-                from src.analytics.cov_window import CovEmsWindow
+                from src.analytics.cov.cov_window import CovEmsWindow
                 cov_window = CovEmsWindow(self, selected_data)
             elif feature_id == 'hypothesis_test':
                 from src.analytics.hypothesis_test.hypothesis_test_window import HypothesisTestWindow

@@ -5,7 +5,6 @@ Statistical hypothesis testing with multiple test types
 import customtkinter as ctk
 from tkinter import messagebox
 import pandas as pd
-from typing import Dict
 
 from src.analytics.hypothesis_test.hypothesis_test_utils import (
     calculate_mean_difference,

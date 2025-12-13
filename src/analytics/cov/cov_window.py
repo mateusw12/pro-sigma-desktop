@@ -11,7 +11,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from typing import List, Dict
 
-from src.analytics.cov_utils import (
+from src.analytics.cov.cov_utils import (
     remove_punctuation,
     replace_data_frame,
     fit_linear_regression,
