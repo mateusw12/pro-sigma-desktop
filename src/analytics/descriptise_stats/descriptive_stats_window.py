@@ -37,12 +37,19 @@ class DescriptiveStatsWindow(ctk.CTkToplevel):
         main = ctk.CTkFrame(self)
         main.pack(fill="both", expand=True, padx=16, pady=16)
 
-        left = ctk.CTkFrame(main, width=280)
-        left.pack(side="left", fill="y")
-        left.pack_propagate(False)
+        left_container = ctk.CTkFrame(main, width=280)
+        left_container.pack(side="left", fill="y")
+        left_container.pack_propagate(False)
+        
+        left = ctk.CTkScrollableFrame(left_container)
+        left.pack(fill="both", expand=True)
 
-        right = ctk.CTkFrame(main)
-        right.pack(side="right", fill="both", expand=True, padx=(12, 0))
+        # Right panel with scroll
+        right_container = ctk.CTkFrame(main)
+        right_container.pack(side="right", fill="both", expand=True, padx=(12, 0))
+        
+        right = ctk.CTkScrollableFrame(right_container)
+        right.pack(fill="both", expand=True)
 
         # Header
         title = ctk.CTkLabel(left, text="Descriptive Statistics", font=ctk.CTkFont(size=18, weight="bold"))

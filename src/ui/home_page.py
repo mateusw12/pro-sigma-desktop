@@ -726,6 +726,12 @@ class HomePage(ctk.CTkFrame):
         Args:
             feature_id: ID da ferramenta
         """
+        # Monte Carlo doesn't need data input
+        if feature_id == 'monte_carlo':
+            from src.analytics.monte_carlo.monte_carlo_window import MonteCarloWindow
+            MonteCarloWindow(self)
+            return
+        
         # Check if there's any data available (current or historical)
         has_current_data = self.current_data is not None
         has_history = len(self.file_history.get_recent_files(count=1)) > 0
