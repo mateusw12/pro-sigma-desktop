@@ -134,6 +134,9 @@ class MonteCarloWindow(ctk.CTkToplevel):
             state="disabled"
         )
         self.export_xlsx_btn.pack(side="right", fill="x", expand=True)
+        
+        # Bottom spacer for footer margin
+        ctk.CTkFrame(left, fg_color="transparent", height=20).pack()
 
         # === RIGHT PANEL: Results ===
         # Stats table

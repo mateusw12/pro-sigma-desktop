@@ -95,6 +95,9 @@ class DescriptiveStatsWindow(ctk.CTkToplevel):
 
         run_btn = ctk.CTkButton(left, text="Analyze", command=self._run_analysis, height=40, font=ctk.CTkFont(size=14, weight="bold"))
         run_btn.pack(fill="x", padx=12, pady=(4, 12))
+        
+        # Bottom spacer for footer margin
+        ctk.CTkFrame(left, fg_color="transparent", height=20).pack()
 
         # Right side: stats table and plots
         table_frame = ctk.CTkFrame(right)

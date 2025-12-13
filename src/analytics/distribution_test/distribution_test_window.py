@@ -99,6 +99,9 @@ class DistributionTestWindow(ctk.CTkToplevel):
         btn_row.pack(fill="x", padx=12, pady=(6, 12))
         run_btn = ctk.CTkButton(btn_row, text="Run", command=self._run, height=40, font=ctk.CTkFont(size=14, weight="bold"))
         run_btn.pack(fill="x")
+        
+        # Bottom spacer for footer margin
+        ctk.CTkFrame(left, fg_color="transparent", height=20).pack()
 
         # Right: table + plots
         table_frame = ctk.CTkFrame(right)
