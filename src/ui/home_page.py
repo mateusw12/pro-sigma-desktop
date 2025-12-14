@@ -310,126 +310,133 @@ class HomePage(ctk.CTkFrame):
         """Cria botões para as ferramentas disponíveis (otimizado)"""
         
         # Definição das ferramentas
+        # in_development: True = ferramenta desabilitada (em desenvolvimento)
         tools_definition = {
-            'variability': {
-                'title': 'Análise de Variabilidade',
-                'description': 'Análise de variabilidade de dados',
-                'plan': 'basic'
-            },
             'process_capability': {
                 'title': 'Process Capability',
                 'description': 'Cálculo de Cp, Cpk, Pp, Ppk',
-                'plan': 'basic'
+                'plan': 'basic',
+                'in_development': False
             },
             'hypothesis_test': {
                 'title': 'Testes de Hipótese',
                 'description': 'Testes T, Z, ANOVA, Qui-quadrado',
-                'plan': 'basic'
+                'plan': 'basic',
+                'in_development': False
             },
             'distribution_test': {
                 'title': 'Teste de Distribuição',
                 'description': 'Ajuste de distribuições (Normal, Weibull, etc)',
-                'plan': 'basic'
+                'plan': 'basic',
+                'in_development': False
             },
             'cov_ems': {
                 'title': 'COV EMS',
                 'description': 'Análise de coeficiente de variação',
-                'plan': 'basic'
+                'plan': 'basic',
+                'in_development': False
             },
             'analytics': {
                 'title': 'Analytics',
                 'description': 'Análise e formatação de dados',
-                'plan': 'basic'
+                'plan': 'basic',
+                'in_development': True  # Em desenvolvimento
             },
             'descriptive_stats': {
                 'title': 'Descriptive Statistics',
                 'description': 'Histograms, boxplots, summary metrics',
-                'plan': 'basic'
-            },
-            'text_analysis': {
-                'title': 'Text Analysis',
-                'description': 'Análise textual e frequência de palavras',
-                'plan': 'intermediate'
+                'plan': 'basic',
+                'in_development': False
             },
             'normalization_test': {
                 'title': 'Testes de Normalidade',
                 'description': 'Shapiro-Wilk, Jarque-Bera, Kolmogorov-Smirnov',
-                'plan': 'intermediate'
+                'plan': 'intermediate',
+                'in_development': False
             },
             'control_charts': {
                 'title': 'Cartas de Controle',
                 'description': 'X-bar, R, S, P, NP, C, U',
-                'plan': 'intermediate'
+                'plan': 'intermediate',
+                'in_development': False
             },
             'dashboard': {
                 'title': 'Dashboard',
                 'description': 'Visualização de métricas',
-                'plan': 'intermediate'
+                'plan': 'intermediate',
+                'in_development': True  # Em desenvolvimento
             },
             'monte_carlo': {
                 'title': 'Monte Carlo',
                 'description': 'Simulações Monte Carlo',
-                'plan': 'intermediate'
-            },
-            'cov_ems': {
-                'title': 'COV EMS',
-                'description': 'Análise de coeficiente de variação',
-                'plan': 'basic'
+                'plan': 'intermediate',
+                'in_development': False
             },
             'variability': {
                 'title': 'Análise de Variabilidade',
                 'description': 'Gráficos de variabilidade com múltiplos fatores X e Y',
-                'plan': 'intermediate'
+                'plan': 'intermediate',
+                'in_development': False
             },
             'text_analysis': {
                 'title': 'Análise de Texto',
                 'description': 'Mineração de texto e processamento de linguagem natural',
-                'plan': 'intermediate'
+                'plan': 'intermediate',
+                'in_development': False
             },
             'simple_regression': {
                 'title': 'Regressão Simples',
                 'description': 'Regressão linear simples',
-                'plan': 'pro'
+                'plan': 'pro',
+                'in_development': True  # Em desenvolvimento
             },
             'multiple_regression': {
                 'title': 'Regressão Múltipla',
                 'description': 'Regressão linear múltipla',
-                'plan': 'pro'
+                'plan': 'pro',
+                'in_development': True  # Em desenvolvimento
             },
             'multivariate': {
                 'title': 'Análise Multivariada',
                 'description': 'PCA, Análise Fatorial, Cluster',
-                'plan': 'pro'
+                'plan': 'pro',
+                'in_development': True  # Em desenvolvimento
             },
             'stackup': {
                 'title': 'StackUp',
                 'description': 'Análise de tolerâncias 2D',
-                'plan': 'pro'
+                'plan': 'pro',
+                'in_development': True  # Em desenvolvimento
             },
             'doe': {
                 'title': 'DOE',
                 'description': 'Design of Experiments',
-                'plan': 'pro'
+                'plan': 'pro',
+                'in_development': True  # Em desenvolvimento
             },
             'space_filling': {
                 'title': 'Space Filling',
                 'description': 'Latin Hypercube',
-                'plan': 'pro'
+                'plan': 'pro',
+                'in_development': True  # Em desenvolvimento
             },
             'warranty_costs': {
                 'title': 'Custos de Garantia',
                 'description': 'Análise de custos de garantia',
-                'plan': 'pro'
+                'plan': 'pro',
+                'in_development': True  # Em desenvolvimento
             },
             'neural_networks': {
                 'title': 'Redes Neurais',
                 'description': 'Análise de redes neurais',
-                'plan': 'pro'
+                'plan': 'pro',
+                'in_development': True  # Em desenvolvimento
             },
             'decision_tree': {
                 'title': 'Árvore de Decisão',
                 'description': 'Análise de árvore de decisão',
-                'plan': 'pro'
+                'plan': 'pro',
+                'in_development': True  # Em desenvolvimento
             },
         }
         
@@ -522,26 +529,61 @@ class HomePage(ctk.CTkFrame):
         # Botão em formato de card
         icon = icon_map.get(feature_id, '🔧')
         
+        # Verificar se está em desenvolvimento
+        is_in_development = tool_info.get('in_development', False)
+        
+        # Configuração visual baseada no status
+        if is_in_development:
+            # Ferramenta desabilitada
+            fg_color = "gray15"
+            hover_color = "gray15"
+            text_color = "gray50"
+            border_color = "gray25"
+            button_text = f"{icon}\n\n{tool_info['title']}\n\n🚧 Em Desenvolvimento"
+            command = lambda: self._show_in_development_message(tool_info['title'])
+        else:
+            # Ferramenta ativa
+            fg_color = "gray20"
+            hover_color = "#2E86DE"
+            text_color = "white"
+            border_color = "gray30"
+            button_text = f"{icon}\n\n{tool_info['title']}"
+            command = lambda: self.open_tool(feature_id)
+        
         tool_button = ctk.CTkButton(
             parent,
-            text=f"{icon}\n\n{tool_info['title']}",
-            command=lambda: self.open_tool(feature_id),
+            text=button_text,
+            command=command,
             width=180,
             height=140,
             corner_radius=12,
-            fg_color="gray20",
-            hover_color="#2E86DE",
+            fg_color=fg_color,
+            hover_color=hover_color,
+            text_color=text_color,
             border_width=2,
-            border_color="gray30",
-            font=ctk.CTkFont(size=12, weight="bold"),
+            border_color=border_color,
+            font=ctk.CTkFont(size=11 if is_in_development else 12, weight="bold"),
             anchor="center"
         )
         tool_button.pack(side="left", padx=8, pady=8)
         
         # Tooltip com descrição (aparece no hover)
-        self._create_tooltip(tool_button, tool_info['description'])
+        tooltip_text = tool_info['description']
+        if is_in_development:
+            tooltip_text += "\n\n⚠️ Esta ferramenta ainda está em desenvolvimento e será disponibilizada em breve."
+        self._create_tooltip(tool_button, tooltip_text)
         
         return tool_button
+    
+    def _show_in_development_message(self, tool_name):
+        """Mostra mensagem quando ferramenta em desenvolvimento é clicada"""
+        messagebox.showinfo(
+            "Ferramenta em Desenvolvimento",
+            f"🚧 {tool_name}\n\n"
+            "Esta ferramenta ainda está em desenvolvimento e será "
+            "disponibilizada em uma próxima versão do Pro Sigma.\n\n"
+            "Agradecemos sua compreensão!"
+        )
     
     def _create_tooltip(self, widget, text):
         """Cria tooltip para o widget"""
