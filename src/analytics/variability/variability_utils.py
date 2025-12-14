@@ -301,27 +301,69 @@ def create_nested_variability_chart(
                         zorder=2
                     )
     
-    # Create x-axis labels showing hierarchical structure
-    # Create multi-level labels
-    tick_positions = []
-    tick_labels = []
+    # Create hierarchical x-axis labels (JMP style - multiple levels)
+    # Disable default x-axis
+    ax.set_xticks([])
+    ax.set_xticklabels([])
     
-    # Group by first X column for major ticks
-    if len(x_columns) > 0:
-        first_col = x_columns[0]
-        for group_name in df_sorted[first_col].unique():
-            group_data = df_sorted[df_sorted[first_col] == group_name]
-            tick_positions.append(group_data['_x_position'].mean())
-            tick_labels.append(str(group_name))
+    # Calculate bottom margin needed for hierarchical labels
+    n_levels = len(x_columns)
+    bottom_margin = 0.15 + (n_levels * 0.05)  # Increase margin for each level
     
-    ax.set_xticks(tick_positions)
-    ax.set_xticklabels(tick_labels, rotation=45, ha='right')
+    # Create text labels for each hierarchical level
+    for level_idx, x_col in enumerate(x_columns):
+        # Calculate y position for this level (below the plot)
+        y_pos = -0.08 - (level_idx * 0.08)
+        
+        # Get unique groups for this level
+        grouped = df_sorted.groupby(x_col)
+        
+        # Track positions to avoid label overlap
+        prev_end = -1
+        
+        for group_name in df_sorted[x_col].unique():
+            group_data = df_sorted[df_sorted[x_col] == group_name]
+            x_start = group_data['_x_position'].min()
+            x_end = group_data['_x_position'].max()
+            x_center = (x_start + x_end) / 2
+            
+            # Normalize position to axis coordinates (0-1)
+            x_range = df_sorted['_x_position'].max() - df_sorted['_x_position'].min()
+            x_norm = (x_center - df_sorted['_x_position'].min()) / x_range if x_range > 0 else 0.5
+            
+            # Add text label
+            ax.text(
+                x_norm,
+                y_pos,
+                str(group_name),
+                transform=ax.transAxes,
+                ha='center',
+                va='top',
+                fontsize=10,
+                fontweight='bold' if level_idx == 0 else 'normal',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='lightgray' if level_idx % 2 == 0 else 'white', 
+                         edgecolor='gray', alpha=0.7)
+            )
+        
+        # Add level label on the left
+        ax.text(
+            -0.02,
+            y_pos,
+            x_col + ':',
+            transform=ax.transAxes,
+            ha='right',
+            va='top',
+            fontsize=9,
+            fontweight='bold',
+            style='italic',
+            color='darkblue'
+        )
     
     # Labels and title
     ax.set_ylabel(y_column, fontsize=12, fontweight='bold')
-    ax.set_xlabel(' → '.join(x_columns), fontsize=11, fontweight='bold')
+    ax.set_xlabel('')  # Remove x label as we have hierarchical labels
     ax.set_title(
-        f'Nested Variability Chart: {y_column} by {", ".join(x_columns)}',
+        f'Variability Chart: {y_column}',
         fontsize=14,
         fontweight='bold'
     )

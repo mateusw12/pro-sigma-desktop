@@ -62,6 +62,155 @@ class VariabilityWindow(ctk.CTkToplevel):
         
         self.create_widgets()
     
+    def get_selected_x_columns_ordered(self):
+        """Get selected X columns in their current order"""
+        selected = [col for col in self.df.columns if self.x_checkboxes[col].get()]
+        return selected
+    
+    def move_x_column_up(self, col):
+        """Move X column up in the order"""
+        if not self.x_checkboxes[col].get():
+            return  # Only move if selected
+        
+        selected = self.get_selected_x_columns_ordered()
+        if col not in selected or selected.index(col) == 0:
+            return  # Already at top or not selected
+        
+        # Swap order in the actual dataframe columns list
+        all_cols = list(self.df.columns)
+        current_idx = all_cols.index(col)
+        
+        # Find the previous selected column
+        prev_selected_cols = [c for c in all_cols[:current_idx] if self.x_checkboxes[c].get()]
+        if prev_selected_cols:
+            prev_col = prev_selected_cols[-1]
+            prev_idx = all_cols.index(prev_col)
+            
+            # Swap in the list
+            all_cols[current_idx], all_cols[prev_idx] = all_cols[prev_idx], all_cols[current_idx]
+            
+            # Update dataframe column order
+            self.df = self.df[all_cols]
+            
+            # Rebuild X checkboxes
+            self.rebuild_x_checkboxes()
+            self.update_separator_level_options()
+    
+    def move_x_column_down(self, col):
+        """Move X column down in the order"""
+        if not self.x_checkboxes[col].get():
+            return  # Only move if selected
+        
+        selected = self.get_selected_x_columns_ordered()
+        if col not in selected or selected.index(col) == len(selected) - 1:
+            return  # Already at bottom or not selected
+        
+        # Swap order in the actual dataframe columns list
+        all_cols = list(self.df.columns)
+        current_idx = all_cols.index(col)
+        
+        # Find the next selected column
+        next_selected_cols = [c for c in all_cols[current_idx+1:] if self.x_checkboxes[c].get()]
+        if next_selected_cols:
+            next_col = next_selected_cols[0]
+            next_idx = all_cols.index(next_col)
+            
+            # Swap in the list
+            all_cols[current_idx], all_cols[next_idx] = all_cols[next_idx], all_cols[current_idx]
+            
+            # Update dataframe column order
+            self.df = self.df[all_cols]
+            
+            # Rebuild X checkboxes
+            self.rebuild_x_checkboxes()
+            self.update_separator_level_options()
+    
+    def rebuild_x_checkboxes(self):
+        """Rebuild X checkboxes after reordering"""
+        # Store current states
+        checkbox_states = {col: var.get() for col, var in self.x_checkboxes.items()}
+        
+        # Clear existing frames
+        for col, widgets in self.x_order_frames.items():
+            widgets['frame'].destroy()
+        
+        self.x_checkboxes.clear()
+        self.x_order_frames.clear()
+        
+        # Recreate checkboxes in new order using stored reference
+        for col in self.df.columns:
+            col_frame = ctk.CTkFrame(self.x_scroll_frame, fg_color="transparent")
+            col_frame.pack(fill="x", pady=2)
+            
+            var = ctk.BooleanVar(value=checkbox_states.get(col, False))
+            cb = ctk.CTkCheckBox(
+                col_frame,
+                text=col,
+                variable=var,
+                font=ctk.CTkFont(size=11),
+                command=self.update_separator_level_options
+            )
+            cb.pack(side="left", padx=(0, 5))
+            
+            # Order control buttons
+            order_frame = ctk.CTkFrame(col_frame, fg_color="transparent")
+            order_frame.pack(side="left")
+            
+            up_btn = ctk.CTkButton(
+                order_frame,
+                text="↑",
+                width=25,
+                height=20,
+                font=ctk.CTkFont(size=12, weight="bold"),
+                command=lambda c=col: self.move_x_column_up(c)
+            )
+            up_btn.pack(side="left", padx=1)
+            
+            down_btn = ctk.CTkButton(
+                order_frame,
+                text="↓",
+                width=25,
+                height=20,
+                font=ctk.CTkFont(size=12, weight="bold"),
+                command=lambda c=col: self.move_x_column_down(c)
+            )
+            down_btn.pack(side="left", padx=1)
+            
+            # Order indicator
+            order_label = ctk.CTkLabel(
+                col_frame,
+                text="",
+                font=ctk.CTkFont(size=9),
+                text_color="gray"
+            )
+            order_label.pack(side="left", padx=(5, 0))
+            
+            self.x_checkboxes[col] = var
+            self.x_order_frames[col] = {
+                'frame': col_frame,
+                'checkbox': cb,
+                'order_frame': order_frame,
+                'up_btn': up_btn,
+                'down_btn': down_btn,
+                'order_label': order_label
+            }
+        
+        self.update_x_column_order_display()
+    
+    def update_x_column_order_display(self):
+        """Update the order display indicators"""
+        selected = self.get_selected_x_columns_ordered()
+        
+        for col, widgets in self.x_order_frames.items():
+            if col in selected:
+                order_num = selected.index(col) + 1
+                widgets['order_label'].configure(text=f"(Nível {order_num})")
+                widgets['order_frame'].pack(side="left")
+            else:
+                widgets['order_label'].configure(text="")
+                # Hide order buttons when not selected
+                # widgets['order_frame'].pack_forget()
+    
     def toggle_separator_options(self):
         """Show/hide separator level options based on checkbox state"""
         if self.show_separators_var.get():
@@ -76,8 +225,8 @@ class VariabilityWindow(ctk.CTkToplevel):
             widget.destroy()
         self.separator_level_vars.clear()
         
-        # Get selected X columns
-        x_columns = [col for col, var in self.x_checkboxes.items() if var.get()]
+        # Get selected X columns in order
+        x_columns = self.get_selected_x_columns_ordered()
         
         if len(x_columns) > 0:
             # Create checkbox for each level
@@ -99,6 +248,9 @@ class VariabilityWindow(ctk.CTkToplevel):
                 font=ctk.CTkFont(size=10),
                 text_color="gray"
             ).pack(side="left", padx=5)
+        
+        # Update order display
+        self.update_x_column_order_display()
     
     def create_widgets(self):
         # Main container with scrollable frame
@@ -148,21 +300,70 @@ class VariabilityWindow(ctk.CTkToplevel):
         ).pack(pady=(0, 5))
         
         # Scrollable frame for X columns
-        x_scroll_frame = ctk.CTkScrollableFrame(x_frame, height=200)
-        x_scroll_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self.x_scroll_frame = ctk.CTkScrollableFrame(x_frame, height=200)
+        self.x_scroll_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         
         self.x_checkboxes = {}
+        self.x_order_frames = {}  # Store frames for reordering
         for col in self.df.columns:
+            # Container frame for checkbox + order buttons
+            col_frame = ctk.CTkFrame(self.x_scroll_frame, fg_color="transparent")
+            col_frame.pack(fill="x", pady=2)
+            
             var = ctk.BooleanVar(value=False)
             cb = ctk.CTkCheckBox(
-                x_scroll_frame,
+                col_frame,
                 text=col,
                 variable=var,
                 font=ctk.CTkFont(size=11),
                 command=self.update_separator_level_options
             )
-            cb.pack(anchor="w", pady=2)
+            cb.pack(side="left", padx=(0, 5))
+            
+            # Order control buttons (only visible when checked)
+            order_frame = ctk.CTkFrame(col_frame, fg_color="transparent")
+            order_frame.pack(side="left")
+            
+            up_btn = ctk.CTkButton(
+                order_frame,
+                text="↑",
+                width=25,
+                height=20,
+                font=ctk.CTkFont(size=12, weight="bold"),
+                command=lambda c=col: self.move_x_column_up(c)
+            )
+            up_btn.pack(side="left", padx=1)
+            
+            down_btn = ctk.CTkButton(
+                order_frame,
+                text="↓",
+                width=25,
+                height=20,
+                font=ctk.CTkFont(size=12, weight="bold"),
+                command=lambda c=col: self.move_x_column_down(c)
+            )
+            down_btn.pack(side="left", padx=1)
+            
+            # Order indicator
+            order_label = ctk.CTkLabel(
+                col_frame,
+                text="",
+                font=ctk.CTkFont(size=9),
+                text_color="gray"
+            )
+            order_label.pack(side="left", padx=(5, 0))
+            
             self.x_checkboxes[col] = var
+            self.x_order_frames[col] = {
+                'frame': col_frame,
+                'checkbox': cb,
+                'order_frame': order_frame,
+                'up_btn': up_btn,
+                'down_btn': down_btn,
+                'order_label': order_label
+            }
+        
+        self.update_x_column_order_display()
         
         # Right side - Y Column (single selection)
         y_frame = ctk.CTkFrame(selection_frame)
@@ -259,8 +460,8 @@ class VariabilityWindow(ctk.CTkToplevel):
     def generate_analysis(self):
         """Generate variability analysis"""
         try:
-            # Get selected columns
-            x_columns = [col for col, var in self.x_checkboxes.items() if var.get()]
+            # Get selected columns in order
+            x_columns = self.get_selected_x_columns_ordered()
             y_column = self.y_var.get()
             
             # Validate selection
