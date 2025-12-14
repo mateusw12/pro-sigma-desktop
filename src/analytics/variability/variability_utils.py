@@ -186,6 +186,8 @@ def create_nested_variability_chart(
     show_mean_lines: bool = True,
     show_group_separators: bool = True,
     separator_levels: Optional[List[int]] = None,
+    lsl: Optional[float] = None,
+    usl: Optional[float] = None,
     figsize: Tuple[int, int] = (14, 8)
 ) -> Figure:
     """
@@ -200,6 +202,8 @@ def create_nested_variability_chart(
         show_group_separators: Show vertical lines separating groups
         separator_levels: List of indices (0-based) indicating which X factor levels to show separators for.
                          If None and show_group_separators is True, defaults to [0] (first level only)
+        lsl: Lower Specification Limit (optional)
+        usl: Upper Specification Limit (optional)
         figsize: Figure size
         
     Returns:
@@ -456,12 +460,61 @@ def create_nested_variability_chart(
         linestyle='--',
         linewidth=1.5,
         alpha=0.6,
-        label=f'Overall Mean: {overall_mean:.2f}'
+        label=f'Média Geral: {overall_mean:.2f}'
     )
+    
+    # Add specification limits if provided
+    if lsl is not None:
+        ax.axhline(
+            y=lsl,
+            color='red',
+            linestyle='--',
+            linewidth=2,
+            alpha=0.8,
+            label=f'LSL: {lsl:.2f}',
+            zorder=5
+        )
+        # Add shaded area below LSL
+        ax.axhspan(
+            ax.get_ylim()[0],
+            lsl,
+            alpha=0.1,
+            color='red',
+            zorder=0
+        )
+    
+    if usl is not None:
+        ax.axhline(
+            y=usl,
+            color='red',
+            linestyle='--',
+            linewidth=2,
+            alpha=0.8,
+            label=f'USL: {usl:.2f}',
+            zorder=5
+        )
+        # Add shaded area above USL
+        ax.axhspan(
+            usl,
+            ax.get_ylim()[1],
+            alpha=0.1,
+            color='red',
+            zorder=0
+        )
+    
+    # Add green zone between limits if both are specified
+    if lsl is not None and usl is not None:
+        ax.axhspan(
+            lsl,
+            usl,
+            alpha=0.05,
+            color='green',
+            zorder=0
+        )
     
     # Grid and legend
     ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
-    ax.legend(loc='upper right', fontsize=10)
+    ax.legend(loc='upper right', fontsize=10, framealpha=0.9)
     
     plt.tight_layout()
     return fig

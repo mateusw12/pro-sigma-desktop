@@ -443,6 +443,62 @@ class VariabilityWindow(ctk.CTkToplevel):
         
         self.separator_level_vars = {}
         
+        # Specification Limits Frame
+        spec_limits_frame = ctk.CTkFrame(config_frame)
+        spec_limits_frame.pack(fill="x", padx=20, pady=10)
+        
+        ctk.CTkLabel(
+            spec_limits_frame,
+            text="Limites de Especificação:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", pady=(10, 5))
+        
+        ctk.CTkLabel(
+            spec_limits_frame,
+            text="Deixe em branco se não houver limites definidos",
+            font=ctk.CTkFont(size=10),
+            text_color="gray"
+        ).pack(anchor="w", pady=(0, 5))
+        
+        limits_inner = ctk.CTkFrame(spec_limits_frame)
+        limits_inner.pack(fill="x", padx=10, pady=(0, 10))
+        
+        # LSL (Lower Specification Limit)
+        lsl_frame = ctk.CTkFrame(limits_inner, fg_color="transparent")
+        lsl_frame.pack(side="left", padx=10)
+        
+        ctk.CTkLabel(
+            lsl_frame,
+            text="LSL (Limite Inferior):",
+            font=ctk.CTkFont(size=12)
+        ).pack(side="left", padx=(0, 5))
+        
+        self.lsl_entry = ctk.CTkEntry(
+            lsl_frame,
+            width=120,
+            placeholder_text="Ex: 3.5",
+            font=ctk.CTkFont(size=12)
+        )
+        self.lsl_entry.pack(side="left")
+        
+        # USL (Upper Specification Limit)
+        usl_frame = ctk.CTkFrame(limits_inner, fg_color="transparent")
+        usl_frame.pack(side="left", padx=10)
+        
+        ctk.CTkLabel(
+            usl_frame,
+            text="USL (Limite Superior):",
+            font=ctk.CTkFont(size=12)
+        ).pack(side="left", padx=(0, 5))
+        
+        self.usl_entry = ctk.CTkEntry(
+            usl_frame,
+            width=120,
+            placeholder_text="Ex: 4.5",
+            font=ctk.CTkFont(size=12)
+        )
+        self.usl_entry.pack(side="left")
+        
         # Generate button
         generate_btn = ctk.CTkButton(
             config_frame,
@@ -495,6 +551,38 @@ class VariabilityWindow(ctk.CTkToplevel):
             show_mean = self.show_mean_var.get()
             show_separators = self.show_separators_var.get()
             
+            # Get specification limits
+            lsl = None
+            usl = None
+            
+            try:
+                lsl_text = self.lsl_entry.get().strip()
+                if lsl_text:
+                    lsl = float(lsl_text)
+            except ValueError:
+                messagebox.showwarning(
+                    "Aviso",
+                    "LSL inválido. Usando apenas o limite superior."
+                )
+            
+            try:
+                usl_text = self.usl_entry.get().strip()
+                if usl_text:
+                    usl = float(usl_text)
+            except ValueError:
+                messagebox.showwarning(
+                    "Aviso",
+                    "USL inválido. Usando apenas o limite inferior."
+                )
+            
+            # Validate limits
+            if lsl is not None and usl is not None and lsl >= usl:
+                messagebox.showerror(
+                    "Erro",
+                    "O Limite Inferior (LSL) deve ser menor que o Limite Superior (USL)."
+                )
+                return
+            
             # Filter dataframe to only selected columns
             cols_to_use = x_columns + [y_column]
             df_filtered = self.df[cols_to_use].dropna()
@@ -530,7 +618,9 @@ class VariabilityWindow(ctk.CTkToplevel):
                 y_column,
                 show_mean_lines=show_mean,
                 show_group_separators=show_separators,
-                separator_levels=separator_levels
+                separator_levels=separator_levels,
+                lsl=lsl,
+                usl=usl
             )
             
             # Embed chart in tkinter
