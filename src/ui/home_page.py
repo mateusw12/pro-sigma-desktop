@@ -381,6 +381,11 @@ class HomePage(ctk.CTkFrame):
                 'description': 'Gráficos de variabilidade com múltiplos fatores X e Y',
                 'plan': 'intermediate'
             },
+            'text_analysis': {
+                'title': 'Análise de Texto',
+                'description': 'Mineração de texto e processamento de linguagem natural',
+                'plan': 'intermediate'
+            },
             'simple_regression': {
                 'title': 'Regressão Simples',
                 'description': 'Regressão linear simples',
@@ -794,6 +799,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'variability':
                 from src.analytics.variability.variability_window import VariabilityWindow
                 VariabilityWindow(self, selected_data)
+            elif feature_id == 'text_analysis':
+                from src.analytics.text_analysis.text_analysis_window import TextAnalysisWindow
+                TextAnalysisWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
