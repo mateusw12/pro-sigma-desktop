@@ -6,7 +6,52 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
+
+
+def encode_categorical_variables(df: pd.DataFrame, categorical_vars: List[str]) -> Tuple[pd.DataFrame, Dict[str, List[str]]]:
+    """
+    Encode categorical variables as dummy variables (one-hot encoding with k-1 dummies)
+    
+    Args:
+        df: DataFrame with categorical variables
+        categorical_vars: List of categorical column names
+    
+    Returns:
+        Tuple of (encoded DataFrame, mapping dictionary of original var to dummy names)
+    """
+    result_df = df.copy()
+    dummy_mapping = {}
+    
+    for cat_var in categorical_vars:
+        # Get unique categories
+        categories = df[cat_var].unique()
+        categories = [c for c in categories if pd.notna(c)]  # Remove NaN
+        categories = sorted(categories, key=str)  # Sort for consistency
+        
+        if len(categories) <= 1:
+            # Only one category - skip
+            continue
+        
+        # Create k-1 dummy variables (first category is reference)
+        dummy_names = []
+        for i, category in enumerate(categories[1:], 1):  # Skip first (reference)
+            dummy_name = f"{cat_var}[{category}]"
+            result_df[dummy_name] = (df[cat_var] == category).astype(int)
+            dummy_names.append(dummy_name)
+        
+        # Store mapping
+        dummy_mapping[cat_var] = {
+            'reference': str(categories[0]),
+            'dummies': dummy_names,
+            'categories': [str(c) for c in categories]
+        }
+        
+        # Remove original categorical column
+        result_df = result_df.drop(columns=[cat_var])
+    
+    return result_df, dummy_mapping
+
 
 def create_interaction_terms(X_df: pd.DataFrame, interactions: List[Tuple[str, str]]) -> pd.DataFrame:
     """
@@ -442,6 +487,40 @@ def create_histogram_residuals(results: Dict):
     ax.set_title('Distribuição dos Resíduos', fontsize=14, fontweight='bold')
     ax.legend()
     ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    return fig
+
+
+def create_line_plot_predictions(y_true: np.ndarray, y_pred: np.ndarray, y_name: str, results: Dict):
+    """Create line plot of actual vs predicted values (sorted by actual values)"""
+    import matplotlib.pyplot as plt
+    
+    # Sort by actual values for better visualization
+    sort_idx = np.argsort(y_true)
+    y_true_sorted = y_true[sort_idx]
+    y_pred_sorted = y_pred[sort_idx]
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Plot lines
+    indices = np.arange(len(y_true_sorted))
+    ax.plot(indices, y_true_sorted, 'o-', label='Valores Reais', 
+            color='#2E86DE', linewidth=2, markersize=4, alpha=0.7)
+    ax.plot(indices, y_pred_sorted, 's-', label='Valores Preditos', 
+            color='#FF5555', linewidth=2, markersize=4, alpha=0.7)
+    
+    # Fill between for error visualization
+    ax.fill_between(indices, y_true_sorted, y_pred_sorted, 
+                    alpha=0.2, color='gray', label='Erro de Predição')
+    
+    # Labels and title
+    ax.set_xlabel('Observações (ordenadas por valor real)', fontsize=12, fontweight='bold')
+    ax.set_ylabel(f'{y_name}', fontsize=12, fontweight='bold')
+    ax.set_title(f'Comparação: Real vs Predito\nR² = {results["r_squared"]:.5f}', 
+                fontsize=14, fontweight='bold')
+    ax.legend(loc='best', fontsize=10)
+    ax.grid(True, alpha=0.3, linestyle='--')
     
     plt.tight_layout()
     return fig

@@ -12,10 +12,22 @@ Ferramenta avançada para análise de regressão linear múltipla com suporte pa
 
 ### 1. Seleção de Variáveis
 
-#### Variáveis Independentes (X)
-- Selecione múltiplas variáveis X via checkboxes
-- Mínimo: 1 variável X
+#### Variáveis Independentes Numéricas (X)
+- Selecione múltiplas variáveis X numéricas via checkboxes
+- Mínimo: 1 variável X (numérica ou categórica)
 - Máximo: limitado apenas pelos dados disponíveis
+
+#### Variáveis Independentes Categóricas (X)
+- **Suporte completo para variáveis categóricas!**
+- Selecione variáveis categóricas (texto, categorias) como preditores
+- Sistema automático de **codificação dummy (one-hot encoding)**
+- Para k categorias, cria k-1 variáveis dummy
+- Primeira categoria ordenada alfabeticamente = **categoria de referência**
+- Exemplo: Gênero [Masculino, Feminino] → 1 dummy: Gênero[Masculino]
+  - Referência: Feminino (valor 0 em todas dummies)
+  - Dummy: Gênero[Masculino] = 1 se Masculino, 0 se Feminino
+- Interface mostra número de categorias entre parênteses
+- Informações de codificação são exibidas nos resultados
 
 #### Termos de Interação
 - Sistema automático de geração de interações
@@ -107,19 +119,85 @@ Ferramenta avançada para análise de regressão linear múltipla com suporte pa
 
 ## Equação da Regressão Múltipla
 
-### Sem Interações
+### Sem Interações (Apenas Numéricas)
 Y = β₀ + β₁X₁ + β₂X₂ + ... + βₚXₚ + ε
 
 ### Com Interações
 Y = β₀ + β₁X₁ + β₂X₂ + β₁₂(X₁×X₂) + ... + ε
 
+### Com Variáveis Categóricas (Dummy Variables)
+Y = β₀ + β₁X₁ + β₂D₁ + β₃D₂ + ... + ε
+
 Onde:
-- Y: Variável dependente
-- X₁, X₂, ..., Xₚ: Variáveis independentes
-- β₀: Intercepto
-- β₁, β₂, ..., βₚ: Coeficientes das variáveis
+- Y: Variável dependente (numérica)
+- X₁, X₂, ..., Xₚ: Variáveis independentes numéricas
+- D₁, D₂, ...: Variáveis dummy (0 ou 1) representando categorias
+- β₀: Intercepto (valor médio quando todas X=0 e categoria = referência)
+- β₁, β₂, ..., βₚ: Coeficientes das variáveis numéricas
+- β para dummies: Diferença em relação à categoria de referência
 - β₁₂: Coeficiente do termo de interação
 - ε: Erro aleatório
+
+## Codificação de Variáveis Categóricas (Dummy Encoding)
+
+### Conceito
+Variáveis categóricas não podem ser usadas diretamente em regressão linear. São convertidas em variáveis dummy (0 ou 1).
+
+### Método: k-1 Encoding
+Para uma variável com k categorias, criamos k-1 variáveis dummy:
+- **1 categoria = referência** (baseline): todas dummies = 0
+- **k-1 categorias restantes**: cada uma com sua dummy
+
+### Exemplo Prático
+
+**Variável Original: Turno (Manhã, Tarde, Noite)**
+
+Codificação:
+```
+Turno[Manhã]  = 0  (referência - não precisa de dummy)
+Turno[Tarde]  = variável dummy 1
+Turno[Noite]  = variável dummy 2
+```
+
+Tabela de conversão:
+| Turno Original | Turno[Tarde] | Turno[Noite] |
+|---------------|--------------|--------------|
+| Manhã         | 0            | 0            |
+| Tarde         | 1            | 0            |
+| Noite         | 0            | 1            |
+
+**Na Equação:**
+```
+Y = β₀ + β₁(Turno[Tarde]) + β₂(Turno[Noite]) + ...
+```
+
+**Interpretação dos Coeficientes:**
+- β₀: Valor médio de Y quando Turno = Manhã (referência)
+- β₁: Diferença média de Y entre Tarde e Manhã
+- β₂: Diferença média de Y entre Noite e Manhã
+
+**Exemplo Numérico:**
+```
+Produtividade = 80 + 5(Turno[Tarde]) - 3(Turno[Noite])
+```
+
+- Manhã: 80 + 5(0) - 3(0) = 80 unidades
+- Tarde: 80 + 5(1) - 3(0) = 85 unidades (+5 vs Manhã)
+- Noite: 80 + 5(0) - 3(1) = 77 unidades (-3 vs Manhã)
+
+### Por Que k-1 Dummies?
+
+Usar k dummies causa **multicolinearidade perfeita**:
+- Se soubermos valores de k-1 dummies, podemos deduzir a k-ésima
+- Matriz X'X se torna singular (não inversível)
+- Regressão falha
+
+Exemplo ruim (k=3, usar 3 dummies):
+```
+Se Turno[Manhã]=0, Turno[Tarde]=0 → Turno[Noite]=1 (sempre!)
+```
+
+Uma dummy é redundante, por isso usamos k-1.
 
 ## Interpretação
 
@@ -179,9 +257,9 @@ Alto VIF significa que a variável é altamente correlacionada com outras, torna
 
 ## Exemplo de Uso
 
-### Cenário: Prever Consumo de Combustível
+### Cenário 1: Prever Consumo de Combustível (Variáveis Numéricas)
 
-**Variáveis X:**
+**Variáveis X Numéricas:**
 - Peso do veículo (kg)
 - Potência do motor (hp)
 - Velocidade máxima (km/h)
@@ -202,13 +280,57 @@ Consumo = β₀ + β₁(Peso) + β₂(Potência) + β₃(Velocidade) + β₄(Pes
 - β₂ < 0: Motores mais potentes consomem mais
 - β₄: Efeito conjunto de peso e potência
 
+### Cenário 2: Prever Salário (Com Variáveis Categóricas)
+
+**Variáveis X Numéricas:**
+- Anos de experiência
+- Horas trabalhadas/semana
+
+**Variáveis X Categóricas:**
+- Departamento [Vendas, TI, RH, Operações]
+- Nível [Júnior, Pleno, Sênior]
+
+**Variável Y:**
+- Salário (R$)
+
+**Codificação Automática:**
+```
+Departamento → 3 dummies (referência: Operações)
+  - Departamento[RH] = 1 se RH, 0 caso contrário
+  - Departamento[TI] = 1 se TI, 0 caso contrário
+  - Departamento[Vendas] = 1 se Vendas, 0 caso contrário
+
+Nível → 2 dummies (referência: Júnior)
+  - Nível[Pleno] = 1 se Pleno, 0 caso contrário
+  - Nível[Sênior] = 1 se Sênior, 0 caso contrário
+```
+
+**Modelo Expandido:**
+```
+Salário = β₀ + β₁(Experiência) + β₂(Horas) 
+         + β₃(Dept[RH]) + β₄(Dept[TI]) + β₅(Dept[Vendas])
+         + β₆(Nível[Pleno]) + β₇(Nível[Sênior])
+```
+
+**Interpretação:**
+- β₁: Aumento de salário por ano adicional de experiência
+- β₂: Aumento de salário por hora adicional trabalhada
+- β₃: Diferença salarial entre RH e Operações (referência)
+- β₄: Diferença salarial entre TI e Operações
+- β₅: Diferença salarial entre Vendas e Operações
+- β₆: Diferença salarial entre Pleno e Júnior (referência)
+- β₇: Diferença salarial entre Sênior e Júnior
+
 ## Requisitos de Dados
 
-- **Mínimo**: 1 variável X, 1 variável Y
-- **Observações**: n > p + 2 (onde p = número de preditores)
+- **Mínimo**: 1 variável X (numérica ou categórica), 1 variável Y (numérica)
+- **Observações**: n > p + 2 (onde p = número de preditores totais após encoding)
 - **Recomendado**: n > 10p para resultados confiáveis
-- Todas as variáveis devem ser numéricas
+- **Variáveis Y**: Devem ser numéricas
+- **Variáveis X Numéricas**: Quantidades, medições contínuas
+- **Variáveis X Categóricas**: Texto, categorias (automaticamente codificadas)
 - Dados com NaN são automaticamente removidos
+- Categorias com apenas 1 valor único são ignoradas
 
 ## Limitações
 

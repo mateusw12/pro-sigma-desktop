@@ -18,7 +18,8 @@ from .multiple_regression_utils import (
     create_summary_table,
     create_regression_plot,
     create_residuals_plot,
-    create_histogram_residuals
+    create_histogram_residuals,
+    create_line_plot_predictions
 )
 
 # Lazy-loaded libraries
@@ -87,9 +88,16 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
         return str(value)
     
     def create_widgets(self):
-        # Main container with scrollable frame
-        self.main_container = ctk.CTkScrollableFrame(self)
-        self.main_container.pack(fill="both", expand=True, padx=20, pady=20)
+        # Main container with scrollable frame (improved scroll)
+        self.main_container = ctk.CTkScrollableFrame(
+            self,
+            scrollbar_button_color="gray30",
+            scrollbar_button_hover_color="gray40"
+        )
+        self.main_container.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Configure mouse wheel scrolling
+        self.main_container._parent_canvas.configure(scrollregion=self.main_container._parent_canvas.bbox("all"))
         
         # Title
         title = ctk.CTkLabel(
@@ -112,29 +120,30 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
         config_frame = ctk.CTkFrame(self.main_container)
         config_frame.pack(fill="x", pady=(0, 20))
         
-        # Get numeric columns only
+        # Get numeric and categorical columns
         numeric_columns = self.df.select_dtypes(include=[self.np.number]).columns.tolist()
+        categorical_columns = self.df.select_dtypes(include=['object', 'category']).columns.tolist()
         
-        if len(numeric_columns) < 2:
+        if len(numeric_columns) < 1:
             messagebox.showerror(
                 "Erro",
-                "São necessárias pelo menos 2 colunas numéricas para análise de regressão."
+                "É necessária pelo menos 1 coluna numérica para análise de regressão."
             )
             self.destroy()
             return
         
-        # === X Variables Selection (Multiple) ===
+        # === X Variables Selection - Numeric (Multiple) ===
         x_frame = ctk.CTkFrame(config_frame)
         x_frame.pack(fill="x", padx=20, pady=10)
         
         ctk.CTkLabel(
             x_frame,
-            text="Variáveis Independentes (X):",
+            text="Variáveis Independentes Numéricas (X):",
             font=ctk.CTkFont(size=14, weight="bold")
         ).pack(anchor="w", pady=(10, 5), padx=10)
         
         # Scrollable frame for X checkboxes
-        x_scroll = ctk.CTkScrollableFrame(x_frame, height=150)
+        x_scroll = ctk.CTkScrollableFrame(x_frame, height=120)
         x_scroll.pack(fill="x", padx=10, pady=(0, 10))
         
         self.x_vars = {}
@@ -149,6 +158,44 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
             )
             cb.pack(anchor="w", padx=10, pady=2)
             self.x_vars[col] = var
+        
+        # === X Categorical Variables Selection ===
+        if categorical_columns:
+            x_cat_frame = ctk.CTkFrame(config_frame)
+            x_cat_frame.pack(fill="x", padx=20, pady=10)
+            
+            ctk.CTkLabel(
+                x_cat_frame,
+                text="Variáveis Independentes Categóricas (X):",
+                font=ctk.CTkFont(size=14, weight="bold")
+            ).pack(anchor="w", pady=(10, 5), padx=10)
+            
+            ctk.CTkLabel(
+                x_cat_frame,
+                text="⚠️ Variáveis categóricas serão codificadas automaticamente como variáveis dummy (k-1 categorias)",
+                font=ctk.CTkFont(size=10),
+                text_color="gray"
+            ).pack(anchor="w", pady=(0, 5), padx=10)
+            
+            # Scrollable frame for categorical X checkboxes
+            x_cat_scroll = ctk.CTkScrollableFrame(x_cat_frame, height=100)
+            x_cat_scroll.pack(fill="x", padx=10, pady=(0, 10))
+            
+            self.x_cat_vars = {}
+            for col in categorical_columns:
+                var = tk.BooleanVar()
+                # Show unique categories count
+                n_categories = self.df[col].nunique()
+                cb = ctk.CTkCheckBox(
+                    x_cat_scroll,
+                    text=f"{col} ({n_categories} categorias)",
+                    variable=var,
+                    font=ctk.CTkFont(size=12)
+                )
+                cb.pack(anchor="w", padx=10, pady=2)
+                self.x_cat_vars[col] = var
+        else:
+            self.x_cat_vars = {}
         
         # === Interaction Terms ===
         interaction_frame = ctk.CTkFrame(config_frame)
@@ -313,17 +360,20 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
     def generate_analysis(self):
         """Generate regression analysis"""
         try:
-            # Get selected X variables
+            # Get selected X variables (numeric)
             selected_x = [col for col, var in self.x_vars.items() if var.get()]
+            
+            # Get selected X variables (categorical)
+            selected_x_cat = [col for col, var in self.x_cat_vars.items() if var.get()]
             
             # Get selected Y variables
             selected_y = [col for col, var in self.y_vars.items() if var.get()]
             
             # Validation
-            if len(selected_x) < 1:
+            if len(selected_x) < 1 and len(selected_x_cat) < 1:
                 messagebox.showerror(
                     "Erro",
-                    "Por favor, selecione pelo menos uma variável X."
+                    "Por favor, selecione pelo menos uma variável X (numérica ou categórica)."
                 )
                 return
             
@@ -335,7 +385,7 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
                 return
             
             # Check overlap
-            overlap = set(selected_x) & set(selected_y)
+            overlap = (set(selected_x) | set(selected_x_cat)) & set(selected_y)
             if overlap:
                 messagebox.showerror(
                     "Erro",
@@ -343,7 +393,7 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
                 )
                 return
             
-            # Get selected interactions
+            # Get selected interactions (only for numeric variables)
             selected_interactions = [(x1, x2) for (x1, x2), var in self.interaction_vars.items() if var.get()]
             
             # Clear previous results
@@ -352,7 +402,14 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
             
             # Perform analysis for each Y
             for y_idx, y_col in enumerate(selected_y):
-                self.analyze_for_y(y_col, selected_x, selected_interactions, y_idx)
+                self.analyze_for_y(y_col, selected_x, selected_x_cat, selected_interactions, y_idx)
+            
+            # Update scroll region to accommodate all results
+            self.main_container.update_idletasks()
+            self.main_container._parent_canvas.configure(scrollregion=self.main_container._parent_canvas.bbox("all"))
+            
+            # Scroll to top to show results
+            self.main_container._parent_canvas.yview_moveto(0)
             
         except Exception as e:
             messagebox.showerror(
@@ -362,8 +419,10 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
             import traceback
             traceback.print_exc()
     
-    def analyze_for_y(self, y_col: str, x_cols: List[str], interactions: List[Tuple[str, str]], y_index: int):
+    def analyze_for_y(self, y_col: str, x_cols: List[str], x_cat_cols: List[str], 
+                     interactions: List[Tuple[str, str]], y_index: int):
         """Perform regression analysis for a specific Y variable"""
+        from .multiple_regression_utils import encode_categorical_variables
         
         # Create separator if not first Y
         if y_index > 0:
@@ -382,23 +441,52 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
         ).pack(pady=15)
         
         # Prepare data
-        all_cols = x_cols + [y_col]
+        all_cols = x_cols + x_cat_cols + [y_col]
         data = self.df[all_cols].dropna()
         
-        if len(data) < len(x_cols) + 2:
+        total_predictors = len(x_cols) + len(x_cat_cols)
+        if len(data) < total_predictors + 2:
             error_label = ctk.CTkLabel(
                 self.results_container,
-                text=f"⚠️ Dados insuficientes para {y_col}: mínimo {len(x_cols) + 2} observações necessárias",
+                text=f"⚠️ Dados insuficientes para {y_col}: mínimo {total_predictors + 2} observações necessárias",
                 text_color="orange",
                 font=ctk.CTkFont(size=12)
             )
             error_label.pack(pady=10)
             return
         
-        # Create X DataFrame with interactions
-        X_df = data[x_cols].copy()
+        # Create X DataFrame - start with numeric variables
+        X_df = data[x_cols].copy() if x_cols else self.pd.DataFrame(index=data.index)
         
-        # Add interaction terms
+        # Encode categorical variables if any
+        dummy_mapping = {}
+        if x_cat_cols:
+            cat_data = data[x_cat_cols].copy()
+            encoded_cat_df, dummy_mapping = encode_categorical_variables(cat_data, x_cat_cols)
+            
+            # Merge encoded categorical with numeric X
+            if not X_df.empty:
+                X_df = self.pd.concat([X_df, encoded_cat_df], axis=1)
+            else:
+                X_df = encoded_cat_df
+            
+            # Show encoding information
+            info_text = "📋 Codificação de Variáveis Categóricas:\n"
+            for cat_var, mapping in dummy_mapping.items():
+                ref_cat = mapping['reference']
+                dummy_names = mapping['dummies']
+                info_text += f"  • {cat_var}: Referência = '{ref_cat}', Dummies = {len(dummy_names)}\n"
+            
+            info_label = ctk.CTkLabel(
+                self.results_container,
+                text=info_text,
+                font=ctk.CTkFont(size=10),
+                text_color="gray",
+                justify="left"
+            )
+            info_label.pack(pady=5, padx=20, anchor="w")
+        
+        # Add interaction terms (only for numeric variables)
         if interactions:
             X_df = create_interaction_terms(X_df, interactions)
         
@@ -432,6 +520,7 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
         self.show_anova_table(results)
         self.show_coefficients_table(results)
         self.show_regression_plot(y, results, y_col)
+        self.show_line_plot(y, results, y_col)
         
         # Optional diagnostic plots
         if self.show_residuals_var.get():
@@ -568,11 +657,28 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
         
         ctk.CTkLabel(
             plot_frame,
-            text="📈 Valores Preditos vs Reais",
+            text="📈 Valores Preditos vs Reais (Scatter)",
             font=ctk.CTkFont(size=16, weight="bold")
         ).pack(pady=(10, 5))
         
         fig = create_regression_plot(y_true, results['y_pred'], y_col, results)
+        
+        canvas = self.FigureCanvasTkAgg(fig, master=plot_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+    
+    def show_line_plot(self, y_true, results, y_col):
+        """Show line plot of predictions"""
+        plot_frame = ctk.CTkFrame(self.results_container)
+        plot_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        ctk.CTkLabel(
+            plot_frame,
+            text="📉 Comparação Real vs Predito (Linha)",
+            font=ctk.CTkFont(size=16, weight="bold")
+        ).pack(pady=(10, 5))
+        
+        fig = create_line_plot_predictions(y_true, results['y_pred'], y_col, results)
         
         canvas = self.FigureCanvasTkAgg(fig, master=plot_frame)
         canvas.draw()

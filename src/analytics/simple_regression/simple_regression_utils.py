@@ -436,3 +436,38 @@ def create_histogram_residuals(
     
     plt.tight_layout()
     return fig
+
+
+def create_line_plot_predictions(X: np.ndarray, y: np.ndarray, results: Dict, 
+                                 x_name: str, y_name: str):
+    """Create line plot of actual vs predicted values (sorted by X values)"""
+    import matplotlib.pyplot as plt
+    
+    # Sort by X values for better visualization
+    sort_idx = np.argsort(X)
+    X_sorted = X[sort_idx]
+    y_sorted = y[sort_idx]
+    y_pred_sorted = results['y_pred'][sort_idx]
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Plot lines
+    ax.plot(X_sorted, y_sorted, 'o-', label='Valores Reais', 
+            color='#2E86DE', linewidth=2, markersize=5, alpha=0.7)
+    ax.plot(X_sorted, y_pred_sorted, 's-', label='Valores Preditos', 
+            color='#FF5555', linewidth=2, markersize=5, alpha=0.7)
+    
+    # Fill between for error visualization
+    ax.fill_between(X_sorted, y_sorted, y_pred_sorted, 
+                    alpha=0.2, color='gray', label='Erro de Predição')
+    
+    # Labels and title
+    ax.set_xlabel(f'{x_name}', fontsize=12, fontweight='bold')
+    ax.set_ylabel(f'{y_name}', fontsize=12, fontweight='bold')
+    ax.set_title(f'Comparação: Real vs Predito\nR² = {results["r_squared"]:.5f}', 
+                fontsize=14, fontweight='bold')
+    ax.legend(loc='best', fontsize=10)
+    ax.grid(True, alpha=0.3, linestyle='--')
+    
+    plt.tight_layout()
+    return fig

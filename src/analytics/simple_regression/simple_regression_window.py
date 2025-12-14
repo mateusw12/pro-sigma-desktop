@@ -14,7 +14,8 @@ from .simple_regression_utils import (
     create_summary_table,
     create_regression_plot,
     create_residuals_plot,
-    create_histogram_residuals
+    create_histogram_residuals,
+    create_line_plot_predictions
 )
 
 # Lazy-loaded libraries
@@ -80,9 +81,16 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
         return str(value)
     
     def create_widgets(self):
-        # Main container with scrollable frame
-        self.main_container = ctk.CTkScrollableFrame(self)
-        self.main_container.pack(fill="both", expand=True, padx=20, pady=20)
+        # Main container with scrollable frame (improved scroll)
+        self.main_container = ctk.CTkScrollableFrame(
+            self,
+            scrollbar_button_color="gray30",
+            scrollbar_button_hover_color="gray40"
+        )
+        self.main_container.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Configure mouse wheel scrolling
+        self.main_container._parent_canvas.configure(scrollregion=self.main_container._parent_canvas.bbox("all"))
         
         # Title
         title = ctk.CTkLabel(
@@ -254,6 +262,7 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
             self.show_anova_table(results)
             self.show_coefficients_table(results, x_col, y_col)
             self.show_regression_plot(X, y, results, x_col, y_col)
+            self.show_line_plot(X, y, results, x_col, y_col)
             
             # Optional diagnostic plots
             if self.show_residuals_var.get():
@@ -261,6 +270,13 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
             
             if self.show_histogram_var.get():
                 self.show_histogram_plot(results)
+            
+            # Update scroll region to accommodate all results
+            self.main_container.update_idletasks()
+            self.main_container._parent_canvas.configure(scrollregion=self.main_container._parent_canvas.bbox("all"))
+            
+            # Scroll to top to show results
+            self.main_container._parent_canvas.yview_moveto(0)
             
         except Exception as e:
             messagebox.showerror(
@@ -410,11 +426,28 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
         
         ctk.CTkLabel(
             plot_frame,
-            text="📈 Gráfico de Regressão",
+            text="📈 Gráfico de Regressão (Scatter)",
             font=ctk.CTkFont(size=16, weight="bold")
         ).pack(pady=(10, 5))
         
         fig = create_regression_plot(X, y, results, x_col, y_col)
+        
+        canvas = self.FigureCanvasTkAgg(fig, master=plot_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+    
+    def show_line_plot(self, X, y, results, x_col, y_col):
+        """Show line plot of predictions"""
+        plot_frame = ctk.CTkFrame(self.results_container)
+        plot_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        ctk.CTkLabel(
+            plot_frame,
+            text="📉 Comparação Real vs Predito (Linha)",
+            font=ctk.CTkFont(size=16, weight="bold")
+        ).pack(pady=(10, 5))
+        
+        fig = create_line_plot_predictions(X, y, results, x_col, y_col)
         
         canvas = self.FigureCanvasTkAgg(fig, master=plot_frame)
         canvas.draw()
