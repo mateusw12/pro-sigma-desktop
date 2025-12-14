@@ -8,7 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from scipy import stats
-from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.metrics import mean_squared_error
 
 
 def calculate_simple_regression(X: np.ndarray, y: np.ndarray) -> Dict:

@@ -75,12 +75,11 @@ Agradecemos sua compreensão!
 - Monte Carlo
 - Análise de Variabilidade
 - Análise de Texto
-
-### 🚧 Em Desenvolvimento
-- Analytics
-- Dashboard
 - Regressão Simples
 - Regressão Múltipla
+
+### 🚧 Em Desenvolvimento
+- Dashboard
 - Análise Multivariada
 - StackUp
 - DOE

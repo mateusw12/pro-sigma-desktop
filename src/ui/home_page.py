@@ -386,9 +386,9 @@ class HomePage(ctk.CTkFrame):
             },
             'multiple_regression': {
                 'title': 'Regressão Múltipla',
-                'description': 'Regressão linear múltipla',
+                'description': 'Regressão com múltiplos X e Y, interações e seleção de modelo',
                 'plan': 'pro',
-                'in_development': True  # Em desenvolvimento
+                'in_development': False
             },
             'multivariate': {
                 'title': 'Análise Multivariada',
@@ -841,6 +841,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'simple_regression':
                 from src.analytics.simple_regression.simple_regression_window import SimpleRegressionWindow
                 SimpleRegressionWindow(self, selected_data)
+            elif feature_id == 'multiple_regression':
+                from src.analytics.multiple_regression.multiple_regression_window import MultipleRegressionWindow
+                MultipleRegressionWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
