@@ -208,8 +208,26 @@ def create_nested_variability_chart(
     if not x_columns or y_column not in df.columns:
         raise ValueError("Invalid columns specified")
     
+    # Adjust figure size based on data volume
+    n_points = len(df)
+    total_groups = sum(df[col].nunique() for col in x_columns)
+    
+    # Increase width for many groups
+    if total_groups > 50:
+        figsize = (min(figsize[0] * 1.5, 24), figsize[1])
+    elif total_groups > 30:
+        figsize = (min(figsize[0] * 1.2, 20), figsize[1])
+    
     # Create figure
     fig, ax = plt.subplots(1, 1, figsize=figsize)
+    
+    # Add warning text if too many data points
+    if n_points > 1000:
+        fig.text(
+            0.5, 0.98,
+            f'Atenção: Visualizando {n_points} pontos. Considere filtrar os dados para melhor visualização.',
+            ha='center', va='top', fontsize=9, color='red', style='italic'
+        )
     
     # Create hierarchical grouping
     df_sorted = df.sort_values(by=x_columns)
@@ -274,31 +292,56 @@ def create_nested_variability_chart(
         # Filter valid levels
         valid_levels = [lvl for lvl in separator_levels if 0 <= lvl < len(x_columns)]
         
-        # Track separator positions to avoid duplicates
-        separator_positions = set()
+        # Track separator positions to avoid duplicates per level
+        separator_positions_by_level = {}
+        
+        # Color palette for different levels
+        level_colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
         
         # Add separators for each requested level
         for level_idx in valid_levels:
             col = x_columns[level_idx]
-            # Use different line styles for different levels
-            linestyle = '--' if level_idx == 0 else ':'
-            linewidth = 2.0 - (level_idx * 0.3)
-            alpha = 0.6 - (level_idx * 0.1)
+            
+            # Different appearance for each level
+            line_color = level_colors[level_idx % len(level_colors)]
+            linewidth = 1.2 - (level_idx * 0.15)  # Thinner lines
+            alpha = 0.7
+            
+            # Calculate extension for this specific level only
+            label_extension_start = 0
+            label_extension_end = -0.08 - (level_idx * 0.08) - 0.04
+            
+            if level_idx not in separator_positions_by_level:
+                separator_positions_by_level[level_idx] = set()
             
             for group_name in df_sorted[col].unique()[:-1]:
                 group_data = df_sorted[df_sorted[col] == group_name]
                 separator_pos = group_data['_x_position'].max() + 0.5
                 
-                # Only add if not already added at this position
-                if separator_pos not in separator_positions:
-                    separator_positions.add(separator_pos)
-                    ax.axvline(
-                        x=separator_pos,
-                        color='gray',
-                        linestyle=linestyle,
+                # Only add if not already added at this position for this level
+                if separator_pos not in separator_positions_by_level[level_idx]:
+                    separator_positions_by_level[level_idx].add(separator_pos)
+                    
+                    # Normalize x position for consistent rendering
+                    x_range = df_sorted['_x_position'].max() - df_sorted['_x_position'].min()
+                    x_norm = (separator_pos - df_sorted['_x_position'].min()) / x_range if x_range > 0 else 0.5
+                    
+                    # Draw continuous line from top of plot through to label area
+                    # Using single line for consistency
+                    y_top = 1.0  # Top of plot in axes coordinates
+                    y_bottom = label_extension_end  # Bottom of label area
+                    
+                    ax.plot(
+                        [x_norm, x_norm],
+                        [y_bottom, y_top],
+                        color=line_color,
+                        linestyle='-',
                         linewidth=linewidth,
                         alpha=alpha,
-                        zorder=2
+                        transform=ax.transAxes,
+                        clip_on=False,
+                        zorder=2,
+                        solid_capstyle='butt'
                     )
     
     # Create hierarchical x-axis labels (JMP style - multiple levels)
@@ -310,6 +353,24 @@ def create_nested_variability_chart(
     n_levels = len(x_columns)
     bottom_margin = 0.15 + (n_levels * 0.05)  # Increase margin for each level
     
+    # Determine font size based on number of data points and groups
+    n_points = len(df_sorted)
+    total_groups = sum(df_sorted[col].nunique() for col in x_columns)
+    
+    # Adjust font sizes based on data volume
+    if n_points > 500 or total_groups > 50:
+        label_fontsize = 7
+        level_fontsize = 7
+        pad_size = 0.2
+    elif n_points > 200 or total_groups > 30:
+        label_fontsize = 8
+        level_fontsize = 8
+        pad_size = 0.25
+    else:
+        label_fontsize = 9
+        level_fontsize = 9
+        pad_size = 0.3
+    
     # Create text labels for each hierarchical level
     for level_idx, x_col in enumerate(x_columns):
         # Calculate y position for this level (below the plot)
@@ -317,11 +378,13 @@ def create_nested_variability_chart(
         
         # Get unique groups for this level
         grouped = df_sorted.groupby(x_col)
+        unique_groups = df_sorted[x_col].unique()
+        n_groups = len(unique_groups)
         
         # Track positions to avoid label overlap
         prev_end = -1
         
-        for group_name in df_sorted[x_col].unique():
+        for group_name in unique_groups:
             group_data = df_sorted[df_sorted[x_col] == group_name]
             x_start = group_data['_x_position'].min()
             x_end = group_data['_x_position'].max()
@@ -331,18 +394,35 @@ def create_nested_variability_chart(
             x_range = df_sorted['_x_position'].max() - df_sorted['_x_position'].min()
             x_norm = (x_center - df_sorted['_x_position'].min()) / x_range if x_range > 0 else 0.5
             
+            # Calculate label width to check for overlap
+            label_width = (x_end - x_start) / x_range if x_range > 0 else 0.1
+            
+            # Decide rotation based on space available
+            rotation = 0
+            if label_width < 0.05 or n_groups > 20:  # Tight space
+                rotation = 45
+                ha = 'right'
+            else:
+                ha = 'center'
+            
+            # Truncate long labels if necessary
+            label_text = str(group_name)
+            if len(label_text) > 15 and n_groups > 10:
+                label_text = label_text[:12] + '...'
+            
             # Add text label
             ax.text(
                 x_norm,
                 y_pos,
-                str(group_name),
+                label_text,
                 transform=ax.transAxes,
-                ha='center',
+                ha=ha,
                 va='top',
-                fontsize=10,
+                fontsize=label_fontsize,
                 fontweight='bold' if level_idx == 0 else 'normal',
-                bbox=dict(boxstyle='round,pad=0.3', facecolor='lightgray' if level_idx % 2 == 0 else 'white', 
-                         edgecolor='gray', alpha=0.7)
+                rotation=rotation,
+                bbox=dict(boxstyle=f'round,pad={pad_size}', facecolor='lightgray' if level_idx % 2 == 0 else 'white', 
+                         edgecolor='gray', alpha=0.6, linewidth=0.5)
             )
         
         # Add level label on the left
@@ -353,7 +433,7 @@ def create_nested_variability_chart(
             transform=ax.transAxes,
             ha='right',
             va='top',
-            fontsize=9,
+            fontsize=level_fontsize,
             fontweight='bold',
             style='italic',
             color='darkblue'
