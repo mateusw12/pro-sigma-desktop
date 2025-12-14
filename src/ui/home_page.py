@@ -336,12 +336,6 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'basic',
                 'in_development': False
             },
-            'analytics': {
-                'title': 'Analytics',
-                'description': 'Análise e formatação de dados',
-                'plan': 'basic',
-                'in_development': True  # Em desenvolvimento
-            },
             'descriptive_stats': {
                 'title': 'Descriptive Statistics',
                 'description': 'Histograms, boxplots, summary metrics',
@@ -386,9 +380,9 @@ class HomePage(ctk.CTkFrame):
             },
             'simple_regression': {
                 'title': 'Regressão Simples',
-                'description': 'Regressão linear simples',
+                'description': 'Regressão linear simples (1 X e 1 Y)',
                 'plan': 'pro',
-                'in_development': True  # Em desenvolvimento
+                'in_development': False
             },
             'multiple_regression': {
                 'title': 'Regressão Múltipla',
@@ -844,6 +838,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'text_analysis':
                 from src.analytics.text_analysis.text_analysis_window import TextAnalysisWindow
                 TextAnalysisWindow(self, selected_data)
+            elif feature_id == 'simple_regression':
+                from src.analytics.simple_regression.simple_regression_window import SimpleRegressionWindow
+                SimpleRegressionWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
