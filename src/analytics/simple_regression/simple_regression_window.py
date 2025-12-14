@@ -5,7 +5,12 @@ Interface for simple linear regression analysis
 import customtkinter as ctk
 from tkinter import messagebox
 from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib
-from src.utils.ui_components import create_minitab_style_table
+from src.utils.ui_components import (
+    create_minitab_style_table,
+    create_variable_selector,
+    create_action_button,
+    create_section_title
+)
 
 from .simple_regression_utils import (
     calculate_simple_regression,
@@ -128,45 +133,23 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
             self.destroy()
             return
         
-        # X Variable Selection
-        x_frame = ctk.CTkFrame(vars_frame, fg_color="transparent")
-        x_frame.pack(side="left", padx=20, pady=10, expand=True)
-        
-        ctk.CTkLabel(
-            x_frame,
-            text="Variável Independente (X):",
-            font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(pady=(0, 5))
-        
-        self.x_var = ctk.StringVar()
-        x_menu = ctk.CTkOptionMenu(
-            x_frame,
-            variable=self.x_var,
-            values=numeric_columns,
-            width=250,
-            font=ctk.CTkFont(size=12)
+        # X Variable Selection (Padronizado)
+        x_selector = create_variable_selector(
+            config_frame,
+            title="Variável Independente (X):",
+            variables=numeric_columns,
+            selection_mode="single"
         )
-        x_menu.pack()
+        self.x_var = x_selector["variable"]
         
-        # Y Variable Selection
-        y_frame = ctk.CTkFrame(vars_frame, fg_color="transparent")
-        y_frame.pack(side="left", padx=20, pady=10, expand=True)
-        
-        ctk.CTkLabel(
-            y_frame,
-            text="Variável Dependente (Y):",
-            font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(pady=(0, 5))
-        
-        self.y_var = ctk.StringVar()
-        y_menu = ctk.CTkOptionMenu(
-            y_frame,
-            variable=self.y_var,
-            values=numeric_columns,
-            width=250,
-            font=ctk.CTkFont(size=12)
+        # Y Variable Selection (Padronizado)
+        y_selector = create_variable_selector(
+            config_frame,
+            title="Variável Dependente (Y):",
+            variables=numeric_columns,
+            selection_mode="single"
         )
-        y_menu.pack()
+        self.y_var = y_selector["variable"]
         
         # Set default values
         if len(numeric_columns) >= 2:
@@ -202,15 +185,13 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
             font=ctk.CTkFont(size=12)
         ).pack(side="left", padx=10)
         
-        # Generate button
-        generate_btn = ctk.CTkButton(
+        # Generate button (Padronizado)
+        create_action_button(
             config_frame,
-            text="📊 Executar Análise de Regressão",
+            text="Executar Análise de Regressão",
             command=self.generate_analysis,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            height=40
+            icon="📊"
         )
-        generate_btn.pack(pady=20)
         
         # Results container (initially empty)
         self.results_container = ctk.CTkFrame(self.main_container)

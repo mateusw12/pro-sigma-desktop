@@ -8,6 +8,7 @@ Distribution Fit Test Window
 import customtkinter as ctk
 from tkinter import ttk, messagebox
 from src.utils.lazy_imports import get_numpy, get_pandas, get_scipy_stats, get_matplotlib, get_matplotlib_figure, get_matplotlib_backend
+from src.utils.ui_components import create_action_button
 
 
 def compute_aic(n, loglik, k):
@@ -124,7 +125,8 @@ class DistributionTestWindow(ctk.CTkToplevel):
 
         btn_row = ctk.CTkFrame(left, fg_color="transparent")
         btn_row.pack(fill="x", padx=12, pady=(6, 12))
-        run_btn = ctk.CTkButton(btn_row, text="Run", command=self._run, height=40, font=ctk.CTkFont(size=14, weight="bold"))
+        # Botão padronizado
+        run_btn = create_action_button(btn_row, text="Executar Teste", command=self._run, icon="▶️")
         run_btn.pack(fill="x")
         
         # Bottom spacer for footer margin

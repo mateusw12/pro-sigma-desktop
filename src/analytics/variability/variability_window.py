@@ -6,6 +6,7 @@ Similar to JMP Variability Chart
 import customtkinter as ctk
 from tkinter import messagebox
 from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib
+from src.utils.ui_components import create_action_button
 
 from .variability_utils import (
     create_nested_variability_chart
@@ -499,15 +500,13 @@ class VariabilityWindow(ctk.CTkToplevel):
         )
         self.usl_entry.pack(side="left")
         
-        # Generate button
-        generate_btn = ctk.CTkButton(
+        # Generate button (Padronizado)
+        create_action_button(
             config_frame,
-            text="🔄 Gerar Gráfico de Variabilidade",
+            text="Gerar Gráfico de Variabilidade",
             command=self.generate_analysis,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            height=40
+            icon="🔄"
         )
-        generate_btn.pack(pady=20)
         
         # Results container (initially empty)
         self.results_container = ctk.CTkFrame(self.main_container)

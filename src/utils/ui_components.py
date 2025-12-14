@@ -214,3 +214,144 @@ def create_minitab_style_table(parent_frame: ctk.CTkFrame,
     table_container.grid_columnconfigure(0, weight=1)
     
     return tree
+
+
+def create_variable_selector(parent_frame: ctk.CTkFrame, 
+                             title: str,
+                             variables: List[str],
+                             selection_mode: str = "single",
+                             description: str = None) -> Dict:
+    """
+    Cria um seletor padronizado de variáveis
+    
+    Args:
+        parent_frame: Frame pai
+        title: Título do seletor
+        variables: Lista de variáveis disponíveis
+        selection_mode: "single" para dropdown, "multiple" para checkboxes
+        description: Texto descritivo opcional
+    
+    Returns:
+        Dict com componentes criados e variáveis de controle
+    """
+    import tkinter as tk
+    
+    # Container frame
+    selector_frame = ctk.CTkFrame(parent_frame)
+    selector_frame.pack(fill="x", padx=20, pady=10)
+    
+    # Title
+    ctk.CTkLabel(
+        selector_frame,
+        text=title,
+        font=ctk.CTkFont(size=14, weight="bold")
+    ).pack(anchor="w", pady=(10, 5), padx=10)
+    
+    # Description (optional)
+    if description:
+        ctk.CTkLabel(
+            selector_frame,
+            text=description,
+            font=ctk.CTkFont(size=10),
+            text_color="gray"
+        ).pack(anchor="w", pady=(0, 5), padx=10)
+    
+    result = {
+        "frame": selector_frame,
+        "variables": {},
+        "mode": selection_mode
+    }
+    
+    if selection_mode == "single":
+        # Dropdown for single selection
+        var = tk.StringVar()
+        dropdown = ctk.CTkOptionMenu(
+            selector_frame,
+            variable=var,
+            values=variables,
+            width=300,
+            font=ctk.CTkFont(size=12),
+            dropdown_font=ctk.CTkFont(size=11)
+        )
+        dropdown.pack(padx=10, pady=(0, 10))
+        
+        if variables:
+            var.set(variables[0])
+        
+        result["variable"] = var
+        result["widget"] = dropdown
+        
+    elif selection_mode == "multiple":
+        # Scrollable frame with checkboxes
+        scroll_frame = ctk.CTkScrollableFrame(selector_frame, height=150)
+        scroll_frame.pack(fill="x", padx=10, pady=(0, 10))
+        
+        for col in variables:
+            var = tk.BooleanVar()
+            cb = ctk.CTkCheckBox(
+                scroll_frame,
+                text=col,
+                variable=var,
+                font=ctk.CTkFont(size=12)
+            )
+            cb.pack(anchor="w", padx=10, pady=2)
+            result["variables"][col] = var
+        
+        result["scroll_frame"] = scroll_frame
+    
+    return result
+
+
+def create_action_button(parent_frame: ctk.CTkFrame,
+                        text: str,
+                        command: callable,
+                        icon: str = "📊") -> ctk.CTkButton:
+    """
+    Cria um botão de ação padronizado
+    
+    Args:
+        parent_frame: Frame pai
+        text: Texto do botão
+        command: Função a ser executada
+        icon: Emoji/ícone do botão
+    
+    Returns:
+        CTkButton criado
+    """
+    button = ctk.CTkButton(
+        parent_frame,
+        text=f"{icon} {text}",
+        command=command,
+        font=ctk.CTkFont(size=14, weight="bold"),
+        height=40,
+        corner_radius=8,
+        fg_color="#1f538d",
+        hover_color="#2E86DE"
+    )
+    button.pack(pady=20)
+    
+    return button
+
+
+def create_section_title(parent_frame: ctk.CTkFrame,
+                        title: str,
+                        icon: str = "📊") -> ctk.CTkLabel:
+    """
+    Cria um título de seção padronizado
+    
+    Args:
+        parent_frame: Frame pai
+        title: Texto do título
+        icon: Emoji/ícone
+    
+    Returns:
+        CTkLabel criado
+    """
+    label = ctk.CTkLabel(
+        parent_frame,
+        text=f"{icon} {title}",
+        font=ctk.CTkFont(size=16, weight="bold")
+    )
+    label.pack(pady=(10, 5))
+    
+    return label

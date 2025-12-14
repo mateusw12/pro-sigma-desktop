@@ -8,6 +8,7 @@ Monte Carlo Simulation Window
 import customtkinter as ctk
 from tkinter import ttk, messagebox, filedialog
 from src.utils.lazy_imports import get_pandas, get_numpy, get_scipy_stats, get_matplotlib_figure, get_matplotlib_backend
+from src.utils.ui_components import create_action_button
 
 
 DISTRIBUTIONS = {
@@ -96,14 +97,12 @@ class MonteCarloWindow(ctk.CTkToplevel):
         self.formula_entry = ctk.CTkEntry(left, placeholder_text="Ex: X + Y * 2")
         self.formula_entry.pack(fill="x", padx=12, pady=(0, 12))
 
-        # Run button
-        self.run_btn = ctk.CTkButton(
+        # Botão padronizado
+        self.run_btn = create_action_button(
             left,
-            text="🎲 Rodar Simulação",
+            text="Rodar Simulação",
             command=self._run_simulation,
-            height=44,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color="#27AE60"
+            icon="🎲"
         )
         self.run_btn.pack(fill="x", padx=12, pady=(4, 8))
 

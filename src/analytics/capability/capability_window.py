@@ -5,7 +5,11 @@ Allows user to perform Cp/Cpk and Pp/Ppk analysis on selected data
 import customtkinter as ctk
 from tkinter import messagebox
 from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib, get_scipy_stats
-from src.utils.ui_components import create_minitab_style_table
+from src.utils.ui_components import (
+    create_minitab_style_table,
+    create_variable_selector,
+    create_action_button
+)
 
 from .capability_utils import (
     calculate_pp_ppk,
@@ -224,17 +228,15 @@ class CapabilityWindow(ctk.CTkToplevel):
         self.lie_entry = ctk.CTkEntry(lie_frame, width=300, placeholder_text="Ex: 90.0")
         self.lie_entry.pack(side="left")
         
-        # Action Buttons
+        # Action Buttons (Padronizado)
         button_frame = ctk.CTkFrame(config_frame, fg_color="transparent")
         button_frame.pack(fill="x", padx=20, pady=20)
         
-        self.calculate_btn = ctk.CTkButton(
+        self.calculate_btn = create_action_button(
             button_frame,
-            text="🔍 Calcular Capacidade",
+            text="Calcular Capacidade",
             command=self.calculate_capability,
-            height=40,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color="#2E86DE"
+            icon="🔍"
         )
         self.calculate_btn.pack(side="left", padx=10)
         

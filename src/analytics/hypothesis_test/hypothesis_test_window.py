@@ -5,6 +5,7 @@ Statistical hypothesis testing with multiple test types
 import customtkinter as ctk
 from tkinter import messagebox
 from src.utils.lazy_imports import get_numpy, get_pandas, get_scipy_stats, get_matplotlib, get_matplotlib_figure, get_matplotlib_backend
+from src.utils.ui_components import create_action_button
 
 from src.analytics.hypothesis_test.hypothesis_test_utils import (
     calculate_mean_difference,
@@ -207,17 +208,15 @@ class HypothesisTestWindow(ctk.CTkToplevel):
         # Store reference to col_section for later repacking
         self.col_section = col_section
         
-        # Action Buttons
+        # Action Buttons (Padronizados)
         self.button_frame = ctk.CTkFrame(config_frame, fg_color="transparent")
         self.button_frame.pack(fill="x", padx=20, pady=20)
         
-        self.calculate_btn = ctk.CTkButton(
+        self.calculate_btn = create_action_button(
             self.button_frame,
-            text="🔍 Calcular Teste",
+            text="Calcular Teste",
             command=self.calculate_test,
-            height=40,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color="#2E86DE"
+            icon="🔍"
         )
         self.calculate_btn.pack(side="left", padx=10)
         

@@ -10,6 +10,7 @@ from src.utils.lazy_imports import (
     get_matplotlib_figure, get_matplotlib_backend,
     get_statsmodels_api, get_statsmodels_formula
 )
+from src.utils.ui_components import create_action_button
 from typing import List, Dict
 
 from src.analytics.cov.cov_utils import (
@@ -221,13 +222,12 @@ class CovEmsWindow(ctk.CTkToplevel):
         button_frame = ctk.CTkFrame(config_frame, fg_color="transparent")
         button_frame.pack(fill="x", padx=20, pady=20)
         
-        self.calculate_btn = ctk.CTkButton(
+        # Botão padronizado
+        self.calculate_btn = create_action_button(
             button_frame,
-            text="🔍 Calcular COV EMS",
+            text="Calcular COV EMS",
             command=self.calculate_cov,
-            height=40,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color="#2E86DE"
+            icon="🔍"
         )
         self.calculate_btn.pack(side="left", padx=10)
         

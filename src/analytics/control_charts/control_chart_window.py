@@ -6,6 +6,7 @@ Supports: X-bar & R, X-bar & S, I-MR, P, NP, C, U charts
 import customtkinter as ctk
 from tkinter import messagebox
 from src.utils.lazy_imports import get_numpy, get_pandas, get_matplotlib_figure, get_matplotlib_backend
+from src.utils.ui_components import create_action_button
 from src.analytics.control_charts.control_chart_utils import (
     calculate_individual_mr,
     calculate_xbar_r,
@@ -166,15 +167,12 @@ class ControlChartWindow(ctk.CTkToplevel):
         # Spacer
         ctk.CTkFrame(left, fg_color="transparent").pack(fill="both", expand=True)
         
-        # Generate button
-        generate_btn = ctk.CTkButton(
+        # Botão padronizado
+        generate_btn = create_action_button(
             left,
             text="Gerar Carta",
             command=self._generate_chart,
-            height=44,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color="#2E86DE",
-            hover_color="#1E5BA8"
+            icon="📊"
         )
         generate_btn.pack(fill="x", padx=12, pady=(10, 14))
         

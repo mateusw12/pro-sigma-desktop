@@ -7,6 +7,7 @@ Normality Test Window
 import customtkinter as ctk
 from tkinter import messagebox
 from src.utils.lazy_imports import get_pandas, get_numpy, get_scipy_stats, get_matplotlib_figure, get_matplotlib_backend
+from src.utils.ui_components import create_action_button
 
 
 class NormalityTestWindow(ctk.CTkToplevel):
@@ -77,12 +78,12 @@ class NormalityTestWindow(ctk.CTkToplevel):
         # Spacer to keep the action button visible at the bottom
         ctk.CTkFrame(left, fg_color="transparent").pack(fill="both", expand=True)
 
-        run_btn = ctk.CTkButton(
+        # Botão padronizado
+        run_btn = create_action_button(
             left,
             text="Rodar Testes",
             command=self._run_tests,
-            height=44,
-            font=ctk.CTkFont(size=14, weight="bold")
+            icon="✓"
         )
         run_btn.pack(fill="x", padx=12, pady=(10, 14))
         

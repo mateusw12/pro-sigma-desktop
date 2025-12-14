@@ -6,6 +6,7 @@ Shows summary table plus histogram and boxplot.
 import customtkinter as ctk
 from tkinter import ttk, messagebox
 from src.utils.lazy_imports import get_numpy, get_pandas, get_scipy_stats, get_matplotlib, get_matplotlib_figure, get_matplotlib_backend
+from src.utils.ui_components import create_action_button
 import seaborn as sns
 
 # Lazy-loaded libraries
@@ -120,7 +121,8 @@ class DescriptiveStatsWindow(ctk.CTkToplevel):
         clear_btn = ctk.CTkButton(btn_row, text="Clear", command=self._clear_selection, height=28, fg_color="#7F8C8D")
         clear_btn.pack(side="right", expand=True, fill="x", padx=(4, 0))
 
-        run_btn = ctk.CTkButton(left, text="Analyze", command=self._run_analysis, height=40, font=ctk.CTkFont(size=14, weight="bold"))
+        # Botão padronizado
+        run_btn = create_action_button(left, text="Analisar", command=self._run_analysis, icon="📊")
         run_btn.pack(fill="x", padx=12, pady=(4, 12))
         
         # Bottom spacer for footer margin
