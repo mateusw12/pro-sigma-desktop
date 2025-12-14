@@ -369,7 +369,7 @@ class HomePage(ctk.CTkFrame):
             'variability': {
                 'title': 'Análise de Variabilidade',
                 'description': 'Gráficos de variabilidade com múltiplos fatores X e Y',
-                'plan': 'intermediate',
+                'plan': 'basic',
                 'in_development': False
             },
             'text_analysis': {
@@ -399,7 +399,7 @@ class HomePage(ctk.CTkFrame):
             'stackup': {
                 'title': 'StackUp',
                 'description': 'Análise de tolerâncias 2D',
-                'plan': 'pro',
+                'plan': 'intermediate',
                 'in_development': True  # Em desenvolvimento
             },
             'doe': {
