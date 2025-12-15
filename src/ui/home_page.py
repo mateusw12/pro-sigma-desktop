@@ -415,10 +415,10 @@ class HomePage(ctk.CTkFrame):
                 'in_development': True  # Em desenvolvimento
             },
             'space_filling': {
-                'title': 'Space Filling',
-                'description': 'Latin Hypercube',
+                'title': 'Space Filling Design',
+                'description': 'Latin Hypercube, Sphere Packing e Análise',
                 'plan': 'pro',
-                'in_development': True  # Em desenvolvimento
+                'in_development': False  # Implementado
             },
             'warranty_costs': {
                 'title': 'Custos de Garantia',
@@ -864,6 +864,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'multivariate':
                 from src.analytics.multivariate.multivariate_window import MultivariateWindow
                 MultivariateWindow(self, selected_data)
+            elif feature_id == 'space_filling':
+                from src.analytics.space_filling.space_filling_window import SpaceFillingWindow
+                SpaceFillingWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(

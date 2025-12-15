@@ -67,6 +67,8 @@ def _import_matplotlib_backend():
 lazy_numpy = LazyModule('numpy')
 lazy_pandas = LazyModule('pandas')
 lazy_scipy_stats = LazyModule('scipy.stats')
+lazy_scipy_spatial_distance = LazyModule('scipy.spatial.distance')
+lazy_pyDOE2 = LazyModule('pyDOE2')
 lazy_matplotlib = LazyModule('matplotlib.pyplot', _import_matplotlib)
 lazy_matplotlib_figure = LazyModule('matplotlib.figure', _import_matplotlib_figure)
 lazy_matplotlib_backend = LazyModule('matplotlib.backends.backend_tkagg', _import_matplotlib_backend)
@@ -87,6 +89,16 @@ def get_pandas():
 def get_scipy_stats():
     """Retorna scipy.stats, carregando apenas quando necessário"""
     return lazy_scipy_stats._load_module()
+
+
+def get_scipy_spatial_distance():
+    """Retorna scipy.spatial.distance, carregando apenas quando necessário"""
+    return lazy_scipy_spatial_distance._load_module()
+
+
+def get_pyDOE2():
+    """Retorna pyDOE2, carregando apenas quando necessário"""
+    return lazy_pyDOE2._load_module()
 
 
 def get_matplotlib():
