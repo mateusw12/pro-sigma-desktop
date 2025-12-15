@@ -432,6 +432,12 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'pro',
                 'in_development': True  # Em desenvolvimento
             },
+            'nonlinear': {
+                'title': 'Regressão Não Linear',
+                'description': 'Análise de regressão não linear',
+                'plan': 'pro',
+                'in_development': False 
+            },
         }
         
         # Obtém features disponíveis
@@ -501,7 +507,7 @@ class HomePage(ctk.CTkFrame):
             'analytics': '🔍', 'text_analysis': '📝', 'normalization_test': '✓',
             'control_charts': '📊', 'dashboard': '📊', 'monte_carlo': '🎲',
             'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '�',
-            'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜',
+            'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'nonlinear': '📉',
             'neural_networks': '🧠', 'decision_tree': '🌳', 'descriptive_stats': '📊',
             'ishikawa': '🐟'
         }
@@ -861,6 +867,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'space_filling':
                 from src.analytics.space_filling.space_filling_window import SpaceFillingWindow
                 SpaceFillingWindow(self, selected_data)
+            elif feature_id == 'nonlinear':
+                from src.analytics.nonlinear.nonlinear_window import NonlinearWindow
+                NonlinearWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(

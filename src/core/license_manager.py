@@ -40,7 +40,7 @@ class LicenseManager:
                 'text_analysis', 'normalization_test', 'control_charts', 
                 'dashboard', 'monte_carlo',
                 'simple_regression', 'multiple_regression', 'multivariate',
-                'stackup', 'doe', 'space_filling',
+                'stackup', 'doe', 'space_filling', 'nonlinear',
                 'neural_networks', 'decision_tree', 'descriptive_stats',
                 'ishikawa'
             ]

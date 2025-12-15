@@ -68,6 +68,8 @@ lazy_numpy = LazyModule('numpy')
 lazy_pandas = LazyModule('pandas')
 lazy_scipy_stats = LazyModule('scipy.stats')
 lazy_scipy_spatial_distance = LazyModule('scipy.spatial.distance')
+lazy_scipy_optimize = LazyModule('scipy.optimize')
+lazy_scipy_special = LazyModule('scipy.special')
 lazy_pyDOE2 = LazyModule('pyDOE2')
 lazy_matplotlib = LazyModule('matplotlib.pyplot', _import_matplotlib)
 lazy_matplotlib_figure = LazyModule('matplotlib.figure', _import_matplotlib_figure)
@@ -94,6 +96,16 @@ def get_scipy_stats():
 def get_scipy_spatial_distance():
     """Retorna scipy.spatial.distance, carregando apenas quando necessário"""
     return lazy_scipy_spatial_distance._load_module()
+
+
+def get_scipy_optimize():
+    """Retorna scipy.optimize, carregando apenas quando necessário"""
+    return lazy_scipy_optimize._load_module()
+
+
+def get_scipy_special():
+    """Retorna scipy.special, carregando apenas quando necessário"""
+    return lazy_scipy_special._load_module()
 
 
 def get_pyDOE2():
