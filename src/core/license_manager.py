@@ -18,7 +18,7 @@ class LicenseManager:
             'name': 'Básico',
             'features': [
                 'variability', 'process_capability', 'hypothesis_test',
-                'distribution_test', 'cov_ems',
+                'distribution_test', 'cov_ems', 'normalization_test',
                 'descriptive_stats', 'ishikawa'
             ]
         },
@@ -27,7 +27,7 @@ class LicenseManager:
             'features': [
                 'variability', 'process_capability', 'hypothesis_test',
                 'distribution_test', 'cov_ems',
-                'text_analysis', 'normalization_test', 'control_charts', 
+                'text_analysis',  'control_charts', 
                 'dashboard', 'monte_carlo', 'cov_ems', 'descriptive_stats',
                 'ishikawa'
             ]
@@ -40,7 +40,7 @@ class LicenseManager:
                 'text_analysis', 'normalization_test', 'control_charts', 
                 'dashboard', 'monte_carlo',
                 'simple_regression', 'multiple_regression', 'multivariate',
-                'stackup', 'doe', 'space_filling', 'warranty_costs',
+                'stackup', 'doe', 'space_filling',
                 'neural_networks', 'decision_tree', 'descriptive_stats',
                 'ishikawa'
             ]

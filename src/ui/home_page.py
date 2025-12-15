@@ -420,12 +420,6 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'pro',
                 'in_development': False  # Implementado
             },
-            'warranty_costs': {
-                'title': 'Custos de Garantia',
-                'description': 'Análise de custos de garantia',
-                'plan': 'pro',
-                'in_development': True  # Em desenvolvimento
-            },
             'neural_networks': {
                 'title': 'Redes Neurais',
                 'description': 'Análise de redes neurais',
@@ -507,7 +501,7 @@ class HomePage(ctk.CTkFrame):
             'analytics': '🔍', 'text_analysis': '📝', 'normalization_test': '✓',
             'control_charts': '📊', 'dashboard': '📊', 'monte_carlo': '🎲',
             'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '�',
-            'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'warranty_costs': '💰',
+            'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜',
             'neural_networks': '🧠', 'decision_tree': '🌳', 'descriptive_stats': '📊',
             'ishikawa': '🐟'
         }
