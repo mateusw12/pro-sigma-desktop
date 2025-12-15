@@ -422,9 +422,9 @@ class HomePage(ctk.CTkFrame):
             },
             'neural_networks': {
                 'title': 'Redes Neurais',
-                'description': 'Análise de redes neurais',
+                'description': 'MLP para Classificação e Regressão com Holdout e K-Fold',
                 'plan': 'pro',
-                'in_development': True  # Em desenvolvimento
+                'in_development': False  # Implementado
             },
             'decision_tree': {
                 'title': 'Árvore de Decisão',
@@ -879,6 +879,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'ccd':
                 from src.analytics.ccd.ccd_window import CCDWindow
                 CCDWindow(self, selected_data)
+            elif feature_id == 'neural_networks':
+                from src.analytics.neural_network.neural_network_window import NeuralNetworkWindow
+                NeuralNetworkWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
