@@ -3,8 +3,7 @@ Funções utilitárias para Central Composite Design (CCD)
 Gera experimentos e calcula ANOVA com Lack of Fit
 """
 
-from src.utils.lazy_imports import get_numpy, get_pandas, get_scipy_stats
-from typing import List, Dict
+from src.utils.lazy_imports import get_numpy, get_pandas
 import itertools
 
 
