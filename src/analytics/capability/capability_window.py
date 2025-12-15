@@ -4,7 +4,8 @@ Allows user to perform Cp/Cpk and Pp/Ppk analysis on selected data
 """
 import customtkinter as ctk
 from tkinter import messagebox
-from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib, get_scipy_stats
+from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib
+from src.utils.ui_components import add_chart_export_button, get_scipy_stats
 from src.utils.ui_components import (
     create_minitab_style_table,
     create_variable_selector,
@@ -1007,6 +1008,9 @@ class CapabilityWindow(ctk.CTkToplevel):
         canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=5)
+        
+        export_btn = add_chart_export_button(chart_frame, fig, "capability_mr_chart")
+        export_btn.pack(pady=5)
     
     def display_individual_chart(self, parent):
         """Display Individual (I) chart with control and specification limits"""
@@ -1054,6 +1058,9 @@ class CapabilityWindow(ctk.CTkToplevel):
         canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=5)
+        
+        export_btn = add_chart_export_button(chart_frame, fig, "capability_individual_chart")
+        export_btn.pack(pady=5)
     
     def display_histogram_chart(self, parent):
         """Display histogram with normal curve and specification limits"""
@@ -1096,7 +1103,10 @@ class CapabilityWindow(ctk.CTkToplevel):
         # Embed in tkinter
         canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(chart_frame, fig, "capability_histogram")
+        export_btn.pack(pady=(5, 10))
     
     def display_capability_chart(self, parent):
         """Display capability indices as bar chart"""
@@ -1150,7 +1160,10 @@ class CapabilityWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(chart_frame, fig, "capability_indices")
+        export_btn.pack(pady=(5, 10))
     
     def display_histogram_chart_phase(self, parent, phase_data, phase_name):
         """Display histogram for a specific phase"""
@@ -1189,7 +1202,10 @@ class CapabilityWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(chart_frame, fig, f"capability_histogram_{phase_name}")
+        export_btn.pack(pady=(5, 10))
     
     def clear_results(self):
         """Clear all results"""

@@ -14,7 +14,8 @@ from src.utils.lazy_imports import (
 )
 from src.utils.ui_components import (
     create_minitab_style_table,
-    create_vertical_stats_table
+    create_vertical_stats_table,
+    add_chart_export_button
 )
 from src.analytics.space_filling.space_filling_utils import (
     calculate_space_filling_analysis,
@@ -591,7 +592,11 @@ class SpaceFillingWindow(ctk.CTkToplevel):
         # Adiciona ao frame
         canvas = FigureCanvasTkAgg(fig, charts_container)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True)
+        canvas.get_tk_widget().pack(fill="both", expand=True, pady=(0, 5))
+        
+        # Botão de exportar
+        export_btn = add_chart_export_button(charts_container, fig, f"space_filling_2d_{response_col}")
+        export_btn.pack(pady=(5, 10))
     
     def _create_3d_surface_controls(self, parent, result, response_col):
         """Cria controles para gráfico 3D"""
@@ -754,7 +759,14 @@ class SpaceFillingWindow(ctk.CTkToplevel):
         # Adiciona ao frame
         canvas = FigureCanvasTkAgg(fig, self.surface_3d_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True)
+        canvas.get_tk_widget().pack(fill="both", expand=True, pady=(0, 5))
+        
+        # Botão de exportar
+        export_btn = add_chart_export_button(
+            self.surface_3d_frame, fig, 
+            f"space_filling_3d_{response_col}_{factor_x1}_{factor_x2}"
+        )
+        export_btn.pack(pady=(5, 10))
     
     def _open_generate_experiment(self):
         """Abre janela para gerar experimento"""

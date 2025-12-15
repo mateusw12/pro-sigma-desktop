@@ -6,6 +6,7 @@ import customtkinter as ctk
 from tkinter import messagebox
 import tkinter as tk
 from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib
+from src.utils.ui_components import add_chart_export_button
 from src.utils.ui_components import create_minitab_style_table
 from typing import List, Tuple
 
@@ -665,7 +666,10 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, master=plot_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(plot_frame, fig, f"multiple_regressao_scatter_{y_col}")
+        export_btn.pack(pady=(5, 10))
     
     def show_line_plot(self, y_true, results, y_col):
         """Show line plot of predictions"""
@@ -682,7 +686,10 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, master=plot_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(plot_frame, fig, f"multiple_regressao_line_{y_col}")
+        export_btn.pack(pady=(5, 10))
     
     def show_residuals_plots(self, results, y_col):
         """Show residual diagnostic plots"""
@@ -699,7 +706,10 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, master=residuals_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(residuals_frame, fig, f"multiple_regressao_residuos_{y_col}")
+        export_btn.pack(pady=(5, 10))
     
     def show_histogram_plot(self, results):
         """Show histogram of residuals"""
@@ -716,4 +726,7 @@ class MultipleRegressionWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, master=hist_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(hist_frame, fig, "multiple_regressao_histograma")
+        export_btn.pack(pady=(5, 10))

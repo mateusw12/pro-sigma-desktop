@@ -5,6 +5,7 @@ Interface for text mining and natural language processing
 import customtkinter as ctk
 from tkinter import messagebox, scrolledtext
 from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib
+from src.utils.ui_components import add_chart_export_button
 from src.utils.ui_components import create_minitab_style_table
 
 from .text_analysis_utils import (
@@ -534,7 +535,10 @@ Documentos com a palavra: {results['documents_with_keyword']} de {len(texts)} ({
         
         canvas = self.FigureCanvasTkAgg(fig, master=cloud_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(cloud_frame, fig, "text_analysis_wordcloud")
+        export_btn.pack(pady=(5, 10))
     
     def show_word_frequency_chart(self):
         """Show word frequency bar chart"""
@@ -554,7 +558,10 @@ Documentos com a palavra: {results['documents_with_keyword']} de {len(texts)} ({
         
         canvas = self.FigureCanvasTkAgg(fig, master=chart_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(chart_frame, fig, "text_analysis_word_frequency")
+        export_btn.pack(pady=(5, 10))
     
     def show_phrase_frequency_chart(self):
         """Show phrase frequency bar chart"""
@@ -574,4 +581,7 @@ Documentos com a palavra: {results['documents_with_keyword']} de {len(texts)} ({
         
         canvas = self.FigureCanvasTkAgg(fig, master=chart_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(chart_frame, fig, "text_analysis_phrase_frequency")
+        export_btn.pack(pady=(5, 10))

@@ -5,6 +5,7 @@ Interface for simple linear regression analysis
 import customtkinter as ctk
 from tkinter import messagebox
 from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib
+from src.utils.ui_components import add_chart_export_button
 from src.utils.ui_components import (
     create_minitab_style_table,
     create_variable_selector,
@@ -415,7 +416,10 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, master=plot_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(plot_frame, fig, f"regressao_scatter_{y_col}_{x_col}")
+        export_btn.pack(pady=(5, 10))
     
     def show_line_plot(self, X, y, results, x_col, y_col):
         """Show line plot of predictions"""
@@ -432,7 +436,10 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, master=plot_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(plot_frame, fig, f"regressao_line_{y_col}_{x_col}")
+        export_btn.pack(pady=(5, 10))
     
     def show_residuals_plots(self, X, results, x_col):
         """Show residual diagnostic plots"""
@@ -449,7 +456,10 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, master=residuals_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(residuals_frame, fig, f"regressao_residuos_{x_col}")
+        export_btn.pack(pady=(5, 10))
     
     def show_histogram_plot(self, results):
         """Show histogram of residuals"""
@@ -466,4 +476,7 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, master=hist_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(hist_frame, fig, "regressao_histograma_residuos")
+        export_btn.pack(pady=(5, 10))

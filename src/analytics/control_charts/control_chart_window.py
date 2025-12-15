@@ -6,7 +6,7 @@ Supports: X-bar & R, X-bar & S, I-MR, P, NP, C, U charts
 import customtkinter as ctk
 from tkinter import messagebox
 from src.utils.lazy_imports import get_numpy, get_pandas, get_matplotlib_figure, get_matplotlib_backend
-from src.utils.ui_components import create_action_button
+from src.utils.ui_components import create_action_button, add_chart_export_button
 from src.analytics.control_charts.control_chart_utils import (
     calculate_individual_mr,
     calculate_xbar_r,
@@ -627,7 +627,10 @@ class ControlChartWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, master=self.plot_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True)
+        canvas.get_tk_widget().pack(fill="both", expand=True, pady=(0, 5))
+        
+        export_btn = add_chart_export_button(self.plot_frame, fig, f"control_chart_{title1.replace(' ', '_')}_{title2.replace(' ', '_')}")
+        export_btn.pack(pady=(5, 10))
     
     def _update_stats(self, stats: Dict[str, str], horizontal: bool = False):
         """Atualiza tabela de estatísticas"""

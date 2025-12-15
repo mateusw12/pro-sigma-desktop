@@ -2,8 +2,9 @@
 UI Utilities - Componentes reutilizáveis de interface
 """
 import customtkinter as ctk
-from tkinter import ttk
+from tkinter import ttk, filedialog, messagebox
 from typing import List, Dict, Any
+from datetime import datetime
 
 
 def create_horizontal_stats_table(parent_frame: ctk.CTkFrame, 
@@ -355,3 +356,50 @@ def create_section_title(parent_frame: ctk.CTkFrame,
     label.pack(pady=(10, 5))
     
     return label
+
+
+def add_chart_export_button(parent_frame: ctk.CTkFrame, figure, default_filename: str = "grafico"):
+    """
+    Adiciona botão de exportar gráfico em PNG
+    
+    Args:
+        parent_frame: Frame onde o botão será adicionado
+        figure: Objeto Figure do matplotlib
+        default_filename: Nome padrão do arquivo (sem extensão)
+    
+    Returns:
+        Button widget
+    """
+    def export_chart():
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            default_name = f"{default_filename}_{timestamp}.png"
+            
+            filepath = filedialog.asksaveasfilename(
+                defaultextension=".png",
+                initialfile=default_name,
+                filetypes=[
+                    ("PNG Image", "*.png"),
+                    ("PDF Document", "*.pdf"),
+                    ("SVG Vector", "*.svg"),
+                    ("All Files", "*.*")
+                ],
+                title="Exportar Gráfico"
+            )
+            
+            if filepath:
+                figure.savefig(filepath, dpi=300, bbox_inches='tight', facecolor='white')
+                messagebox.showinfo("Sucesso", f"Gráfico exportado com sucesso!\n{filepath}")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao exportar gráfico:\n{str(e)}")
+    
+    export_btn = ctk.CTkButton(
+        parent_frame,
+        text="💾 Exportar Gráfico",
+        command=export_chart,
+        height=28,
+        fg_color="#27AE60",
+        hover_color="#1E8449"
+    )
+    
+    return export_btn

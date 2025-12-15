@@ -10,7 +10,7 @@ from src.utils.lazy_imports import (
     get_matplotlib_figure, get_matplotlib_backend,
     get_statsmodels_api, get_statsmodels_formula
 )
-from src.utils.ui_components import create_action_button
+from src.utils.ui_components import create_action_button, add_chart_export_button
 from typing import List, Dict
 
 from src.analytics.cov.cov_utils import (
@@ -743,7 +743,10 @@ class CovEmsWindow(ctk.CTkToplevel):
         
         canvas = self.FigureCanvasTkAgg(fig, chart_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=(10, 5))
+        
+        export_btn = add_chart_export_button(chart_frame, fig, "cov_variance_components")
+        export_btn.pack(pady=(5, 10))
     
     def clear_results(self):
         """Clear all results"""
