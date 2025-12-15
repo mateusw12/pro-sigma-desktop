@@ -4,11 +4,15 @@ Suporta MLP com métodos Holdout e K-Fold
 """
 
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.patches as mpatches
+import pickle
+import json
+from pathlib import Path
+from datetime import datetime
 
 from src.utils.lazy_imports import get_pandas, get_numpy
 from src.utils.ui_components import add_chart_export_button
@@ -32,6 +36,9 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
         self.results = None
         
         self.configure(fg_color="#2b2b2b")
+        
+        # Protocolo de fechamento para não fechar programa todo
+        self.protocol("WM_DELETE_WINDOW", self.destroy)
         
         self._create_widgets()
         self._populate_columns()
@@ -198,9 +205,13 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
         )
         max_iter_entry.grid(row=2, column=1, padx=5, pady=5, sticky="w")
         
+        # Container para botões
+        buttons_container = ctk.CTkFrame(config_frame, fg_color="transparent")
+        buttons_container.pack(pady=15)
+        
         # Botão treinar
         train_btn = ctk.CTkButton(
-            config_frame,
+            buttons_container,
             text="🚀 Treinar Rede Neural",
             command=self._train_network,
             font=ctk.CTkFont(size=13, weight="bold"),
@@ -209,7 +220,39 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
             height=40,
             width=200
         )
-        train_btn.pack(pady=15)
+        train_btn.pack(side="left", padx=5)
+        
+        # Botão carregar modelo
+        load_btn = ctk.CTkButton(
+            buttons_container,
+            text="📂 Carregar Modelo",
+            command=self._load_model,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color="#2ecc71",
+            hover_color="#27ae60",
+            height=40,
+            width=180
+        )
+        load_btn.pack(side="left", padx=5)
+        
+        # Checkbox para re-treinar modelo ao carregar
+        self.retrain_on_load_var = tk.BooleanVar(value=False)
+        retrain_check = ctk.CTkCheckBox(
+            buttons_container,
+            text="🔄 Re-treinar com novos dados (Fine-Tuning)",
+            variable=self.retrain_on_load_var,
+            font=ctk.CTkFont(size=11)
+        )
+        retrain_check.pack(side="left", padx=10)
+        
+        # Label explicativo
+        retrain_info = ctk.CTkLabel(
+            config_frame,
+            text="💡 Marque a opção acima para refinar um modelo existente com novos dados",
+            font=ctk.CTkFont(size=9),
+            text_color="gray"
+        )
+        retrain_info.pack(pady=(0, 5))
         
         # Frame de loading
         self.loading_frame = ctk.CTkFrame(self.main_container)
@@ -399,9 +442,17 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
             return
         
         # Título dos resultados
+        if self.results.get('loaded_model', False):
+            if self.results['model_info'].get('retrained', False):
+                title_text = f"📊 Resultados - Modelo Re-Treinado 🔄 ({self.results.get('model_file', 'modelo.pkl')})"
+            else:
+                title_text = f"📊 Resultados - Modelo Carregado ({self.results.get('model_file', 'modelo.pkl')})"
+        else:
+            title_text = "📊 Resultados da Análise"
+        
         result_title = ctk.CTkLabel(
             self.results_frame,
-            text="📊 Resultados da Análise",
+            text=title_text,
             font=ctk.CTkFont(size=18, weight="bold")
         )
         result_title.pack(pady=(10, 15))
@@ -445,12 +496,348 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
             ['Tipo', 'Classificação' if self.results['is_classification'] else 'Regressão']
         ]
         
+        # Adiciona informação de re-treino se aplicável
+        if model_info.get('retrained', False):
+            data_rows.append(['Status', '🔄 Re-Treinado (Fine-Tuned)'])
+            data_rows.append(['Iterações Extras', str(model_info.get('retrain_iterations', 0))])
+        
         # Adiciona hiperparâmetros
         for key, value in model_info['best_params'].items():
             param_name = key.replace('_', ' ').title()
             data_rows.append([param_name, str(value)])
         
         self._create_compact_table(info_frame, headers, data_rows)
+        
+        # Botão para salvar modelo
+        save_model_btn = ctk.CTkButton(
+            info_frame,
+            text="💾 Salvar Modelo Treinado",
+            command=self._save_model,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color="#9b59b6",
+            hover_color="#8e44ad",
+            height=35,
+            width=180
+        )
+        save_model_btn.pack(pady=(10, 10))
+    
+    def _save_model(self):
+        """Salva o modelo treinado em arquivo"""
+        if not self.results:
+            messagebox.showwarning("Aviso", "Nenhum modelo treinado para salvar")
+            return
+        
+        # Dialog para escolher onde salvar
+        file_path = filedialog.asksaveasfilename(
+            title="Salvar Modelo de Rede Neural",
+            defaultextension=".pkl",
+            filetypes=[
+                ("Modelo ProSigma", "*.pkl"),
+                ("Todos os arquivos", "*.*")
+            ],
+            initialfile=f"neural_network_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pkl"
+        )
+        
+        if not file_path:
+            return
+        
+        try:
+            # Obtém colunas selecionadas
+            x_columns = [col for col, var in self.x_column_vars.items() if var.get()]
+            y_column = self.y_column_var.get()
+            
+            pd = get_pandas()
+            categorical_cols = self.data[x_columns].select_dtypes(include=['object', 'category']).columns.tolist()
+            
+            # Prepara dados para salvar
+            model_data = {
+                'model': self.results['model'],
+                'preprocessor': self.results.get('preprocessor'),
+                'is_classification': self.results['is_classification'],
+                'feature_names': self.results['feature_names'],
+                'x_columns': x_columns,
+                'y_column': y_column,
+                'categorical_cols': categorical_cols,
+                'model_info': self.results['model_info'],
+                'feature_importance': self.results['feature_importance'],
+                'method': self.method_var.get(),
+                'activation': self.activation_var.get(),
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'prosigma_version': '1.0.0'
+            }
+            
+            # Salva usando pickle
+            with open(file_path, 'wb') as f:
+                pickle.dump(model_data, f)
+            
+            # Salva metadados em JSON (para fácil leitura)
+            metadata_path = str(Path(file_path).with_suffix('.json'))
+            metadata = {
+                'tipo': 'Classificação' if model_data['is_classification'] else 'Regressão',
+                'arquitetura': str(model_data['model_info']['hidden_layers']),
+                'n_camadas': model_data['model_info']['n_layers'],
+                'ativacao': model_data['activation'],
+                'metodo': model_data['method'],
+                'features_entrada': x_columns,
+                'variavel_alvo': y_column,
+                'features_categoricas': categorical_cols,
+                'data_treinamento': model_data['timestamp'],
+                'versao_prosigma': model_data['prosigma_version']
+            }
+            
+            with open(metadata_path, 'w', encoding='utf-8') as f:
+                json.dump(metadata, f, indent=4, ensure_ascii=False)
+            
+            messagebox.showinfo(
+                "Sucesso",
+                f"Modelo salvo com sucesso!\n\n"
+                f"Arquivo: {Path(file_path).name}\n"
+                f"Metadados: {Path(metadata_path).name}\n\n"
+                f"Tipo: {metadata['tipo']}\n"
+                f"Arquitetura: {metadata['arquitetura']}"
+            )
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao salvar modelo:\n{str(e)}")
+            import traceback
+            traceback.print_exc()
+    
+    def _load_model(self):
+        """Carrega um modelo salvo e faz análise completa com dados atuais"""
+        if self.data is None:
+            messagebox.showerror(
+                "Erro",
+                "Nenhum dado carregado!\n\n"
+                "Por favor, carregue um arquivo de dados antes de usar um modelo pré-treinado."
+            )
+            return
+        
+        file_path = filedialog.askopenfilename(
+            title="Carregar Modelo de Rede Neural",
+            filetypes=[
+                ("Modelo ProSigma", "*.pkl"),
+                ("Todos os arquivos", "*.*")
+            ]
+        )
+        
+        if not file_path:
+            return
+        
+        try:
+            # Mostra loading
+            self._show_loading(True)
+            
+            # Carrega o modelo
+            with open(file_path, 'rb') as f:
+                model_data = pickle.load(f)
+            
+            # Verifica versão (compatibilidade)
+            if 'prosigma_version' not in model_data:
+                self._show_loading(False)
+                response = messagebox.askyesno(
+                    "Aviso",
+                    "Este modelo foi salvo em uma versão antiga.\n"
+                    "Pode haver problemas de compatibilidade.\n\n"
+                    "Deseja continuar?"
+                )
+                if not response:
+                    return
+                self._show_loading(True)
+            
+            # Verifica se dados têm as colunas necessárias
+            pd = get_pandas()
+            missing_cols = set(model_data['x_columns']) - set(self.data.columns)
+            if missing_cols:
+                self._show_loading(False)
+                messagebox.showerror(
+                    "Erro - Colunas Faltando",
+                    f"Os dados atuais não têm as colunas necessárias para este modelo.\n\n"
+                    f"Colunas faltando:\n{', '.join(missing_cols)}\n\n"
+                    f"Colunas necessárias:\n{', '.join(model_data['x_columns'])}\n\n"
+                    f"Por favor, carregue um arquivo com as colunas corretas."
+                )
+                return
+            
+            # Verifica se Y existe nos dados (para comparação)
+            has_y = model_data['y_column'] in self.data.columns
+            
+            # Verifica se deve re-treinar
+            should_retrain = self.retrain_on_load_var.get() and has_y
+            
+            if should_retrain:
+                # RE-TREINAMENTO (Fine-Tuning)
+                self._show_loading(False)
+                response = messagebox.askyesno(
+                    "Re-treinar Modelo",
+                    f"🔄 Você optou por re-treinar o modelo!\n\n"
+                    f"O modelo atual será refinado (fine-tuned) com os novos dados.\n\n"
+                    f"Dados atuais: {len(self.data)} observações\n"
+                    f"Features: {len(model_data['x_columns'])}\n"
+                    f"Arquitetura atual: {model_data['model_info']['hidden_layers']}\n\n"
+                    f"Isso pode levar alguns segundos. Continuar?"
+                )
+                
+                if not response:
+                    return
+                
+                self._show_loading(True)
+                
+                # Re-treina o modelo
+                y_pred, updated_model_info = self._retrain_model(
+                    model_data, 
+                    self.data[model_data['x_columns']].copy(),
+                    self.data[model_data['y_column']].values
+                )
+                
+                # Atualiza model_info com novos valores
+                model_data['model_info'].update(updated_model_info)
+                
+            else:
+                # Prepara dados para predição
+                X = self.data[model_data['x_columns']].copy()
+                
+                # Transforma usando o preprocessor salvo
+                if model_data['preprocessor'] is not None:
+                    X_transformed = model_data['preprocessor'].transform(X)
+                else:
+                    X_transformed = X
+                
+                # Faz predições
+                y_pred = model_data['model'].predict(X_transformed)
+            
+            # Monta results no mesmo formato que o treinamento
+            self.results = {
+                'model': model_data['model'],
+                'preprocessor': model_data.get('preprocessor'),
+                'is_classification': model_data['is_classification'],
+                'feature_names': model_data['feature_names'],
+                'feature_importance': model_data['feature_importance'],
+                'model_info': model_data['model_info'],
+                'y_pred': y_pred,
+                'loaded_model': True,
+                'model_file': Path(file_path).name
+            }
+            
+            # Se tiver Y nos dados, calcula métricas
+            if has_y:
+                y_true = self.data[model_data['y_column']].values
+                self.results['y_true'] = y_true
+                
+                # Calcula métricas
+                if model_data['is_classification']:
+                    from src.analytics.neural_network.neural_network_utils import calculate_metrics_classification
+                    y_pred_proba = model_data['model'].predict_proba(X_transformed) if hasattr(model_data['model'], 'predict_proba') else None
+                    self.results['metrics'] = calculate_metrics_classification(y_true, y_pred, y_pred_proba)
+                else:
+                    from src.analytics.neural_network.neural_network_utils import calculate_metrics_regression
+                    self.results['metrics'] = calculate_metrics_regression(y_true, y_pred)
+            else:
+                # Sem Y, apenas predições
+                self.results['y_true'] = None
+                self.results['metrics'] = None
+            
+            # Atualiza interface para refletir modelo carregado
+            self.method_var.set(model_data.get('method', 'holdout'))
+            self.activation_var.set(model_data['activation'])
+            
+            # Esconde loading
+            self._show_loading(False)
+            
+            # Exibe resultados completos
+            self._display_results()
+            
+            # Mensagem de sucesso
+            if has_y:
+                if should_retrain:
+                    status_msg = (
+                        f"✅ Modelo re-treinado com sucesso!\n\n"
+                        f"Arquivo original: {Path(file_path).name}\n"
+                        f"Tipo: {'Classificação' if model_data['is_classification'] else 'Regressão'}\n"
+                        f"Arquitetura: {model_data['model_info']['hidden_layers']}\n\n"
+                        f"🔄 O modelo foi refinado com {len(y_pred)} novas observações.\n"
+                        f"Iterações adicionais: {model_data['model_info'].get('retrain_iterations', 'N/A')}\n"
+                        f"Loss após re-treino: {model_data['model_info']['loss']:.6f}\n\n"
+                        f"💡 Dica: Salve este modelo atualizado para preservar o aprendizado!"
+                    )
+                else:
+                    status_msg = (
+                        f"✅ Modelo carregado com sucesso!\n\n"
+                        f"Arquivo: {Path(file_path).name}\n"
+                        f"Tipo: {'Classificação' if model_data['is_classification'] else 'Regressão'}\n"
+                        f"Arquitetura: {model_data['model_info']['hidden_layers']}\n\n"
+                        f"Predições realizadas para {len(y_pred)} observações.\n"
+                        f"Métricas calculadas com base nos dados atuais.\n\n"
+                        f"💡 Marque 'Re-treinar' para refinar o modelo com estes dados."
+                    )
+                
+                messagebox.showinfo("Modelo Carregado", status_msg)
+            else:
+                messagebox.showinfo(
+                    "Modelo Carregado",
+                    f"✅ Modelo carregado com sucesso!\n\n"
+                    f"Arquivo: {Path(file_path).name}\n"
+                    f"Tipo: {'Classificação' if model_data['is_classification'] else 'Regressão'}\n"
+                    f"Arquitetura: {model_data['model_info']['hidden_layers']}\n\n"
+                    f"Predições realizadas para {len(y_pred)} observações.\n\n"
+                    f"⚠️ Nota: Coluna '{model_data['y_column']}' não encontrada nos dados.\n"
+                    f"Apenas predições serão mostradas (sem métricas de comparação)."
+                )
+            
+        except Exception as e:
+            self._show_loading(False)
+            messagebox.showerror("Erro", f"Erro ao carregar modelo:\n{str(e)}")
+            import traceback
+            traceback.print_exc()
+    
+    def _retrain_model(self, model_data, X, y):
+        """Re-treina (fine-tune) o modelo com novos dados"""
+        try:
+            # Transforma features se necessário
+            if model_data['preprocessor'] is not None:
+                X_transformed = model_data['preprocessor'].transform(X)
+            else:
+                X_transformed = X
+            
+            # Obtém modelo atual
+            model = model_data['model']
+            
+            # Guarda número de iterações atual
+            initial_iterations = model.n_iter_
+            
+            # Configura para treino incremental (warm_start permite continuar treinamento)
+            model.warm_start = True
+            
+            # Define número adicional de iterações para fine-tuning
+            # Usar menos iterações que o treinamento inicial (10-20% do max_iter)
+            additional_iterations = max(50, int(self.max_iter_var.get() * 0.2))
+            model.max_iter = additional_iterations
+            
+            # Re-treina com novos dados
+            model.fit(X_transformed, y)
+            
+            # Calcula nova loss
+            new_loss = model.loss_
+            
+            # Faz predições
+            y_pred = model.predict(X_transformed)
+            
+            # Atualiza informações do modelo
+            updated_info = {
+                'n_iter': model.n_iter_,
+                'loss': new_loss,
+                'retrain_iterations': model.n_iter_ - initial_iterations,
+                'retrained': True
+            }
+            
+            # Recalcula feature importance com novos dados
+            from src.analytics.neural_network.neural_network_utils import calculate_feature_importance
+            new_importance = calculate_feature_importance(model, X_transformed, y, model_data['feature_names'])
+            model_data['feature_importance'] = new_importance
+            
+            return y_pred, updated_info
+            
+        except Exception as e:
+            raise Exception(f"Erro ao re-treinar modelo: {str(e)}")
     
     def _create_compact_table(self, parent, headers, data_rows):
         """Cria uma tabela compacta estilo Minitab"""
@@ -499,10 +886,25 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
             font=ctk.CTkFont(size=14, weight="bold")
         ).pack(pady=(10, 10), padx=10, anchor="w")
         
+        # Se for modelo carregado sem métricas
+        if self.results.get('loaded_model', False) and self.results.get('metrics') is None:
+            no_metrics_label = ctk.CTkLabel(
+                metrics_frame,
+                text="⚠️ Métricas não disponíveis\n\n"
+                     "Os dados atuais não contêm a\n"
+                     "coluna alvo para comparação.\n\n"
+                     "Apenas predições foram geradas.",
+                font=ctk.CTkFont(size=11),
+                text_color="orange",
+                justify="center"
+            )
+            no_metrics_label.pack(pady=50)
+            return
+        
         method = self.method_var.get()
         is_classification = self.results['is_classification']
         
-        if method == "holdout":
+        if method == "holdout" and not self.results.get('loaded_model', False):
             self._display_holdout_metrics(metrics_frame, is_classification)
         else:
             self._display_kfold_metrics(metrics_frame, is_classification)
@@ -534,7 +936,7 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
         self._create_compact_table(parent, headers, data_rows)
     
     def _display_kfold_metrics(self, parent, is_classification):
-        """Exibe métricas do método K-Fold"""
+        """Exibe métricas do método K-Fold ou modelo carregado"""
         metrics = self.results['metrics']
         
         if is_classification:
@@ -547,7 +949,12 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
                 ['ROC-AUC', f"{metrics['roc_auc']:.4f}", f"{metrics.get('roc_auc_std', 0):.4f}"]
             ]
         else:
-            headers = ['Métrica', 'Média', 'Desvio Padrão']
+            # Para modelo carregado sem std, mostra apenas valor
+            if self.results.get('loaded_model', False):
+                headers = ['Métrica', 'Valor', '']
+            else:
+                headers = ['Métrica', 'Média', 'Desvio Padrão']
+            
             data_rows = [
                 ['MSE', f"{metrics['mse']:.6f}", f"{metrics.get('mse_std', 0):.6f}"],
                 ['RMSE', f"{metrics['rmse']:.6f}", f"{metrics.get('rmse_std', 0):.6f}"],
@@ -618,32 +1025,47 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
         
         method = self.method_var.get()
         
-        if method == "holdout":
+        # Modelo carregado ou K-Fold
+        if self.results.get('loaded_model', False) or method == "kfold":
+            y_true = self.results.get('y_true')
+            y_pred = self.results['y_pred']
+        else:  # Holdout
             y_true = self.results['y_test']
             y_pred = self.results['y_pred_test']
+        
+        # Se não tiver y_true, só mostra predições
+        if y_true is None:
+            np = get_numpy()
+            y_pred_array = np.array(y_pred)
+            indices = range(len(y_pred_array))
+            
+            ax.plot(indices, y_pred_array, 's-', color='#ff7f0e', linewidth=2, markersize=5,
+                    label='Predições', alpha=0.8)
+            ax.set_xlabel('Observação', fontsize=11, fontweight='bold')
+            ax.set_ylabel('Valor Predito', fontsize=11, fontweight='bold')
+            ax.set_title('Predições do Modelo', fontsize=13, fontweight='bold', pad=10)
+            ax.legend(loc='best', framealpha=0.9)
+            ax.grid(True, alpha=0.3, linestyle='--')
         else:
-            y_true = self.results['y_true']
-            y_pred = self.results['y_pred']
-        
-        # Ordena por y_true
-        np = get_numpy()
-        y_true_array = np.array(y_true)
-        y_pred_array = np.array(y_pred)
-        sorted_indices = np.argsort(y_true_array)
-        y_true_sorted = y_true_array[sorted_indices]
-        y_pred_sorted = y_pred_array[sorted_indices]
-        
-        indices = range(len(y_true_sorted))
-        ax.plot(indices, y_true_sorted, 'o-', color='#2ca02c', linewidth=2, markersize=5,
-                label='Real', alpha=0.8)
-        ax.plot(indices, y_pred_sorted, 's--', color='#ff7f0e', linewidth=2, markersize=5,
-                label='Predito', alpha=0.8)
-        
-        ax.set_xlabel('Observação (ordenada)', fontsize=11, fontweight='bold')
-        ax.set_ylabel('Valor', fontsize=11, fontweight='bold')
-        ax.set_title('Comparação Real vs Predito', fontsize=13, fontweight='bold', pad=10)
-        ax.legend(loc='best', framealpha=0.9)
-        ax.grid(True, alpha=0.3, linestyle='--')
+            # Ordena por y_true
+            np = get_numpy()
+            y_true_array = np.array(y_true)
+            y_pred_array = np.array(y_pred)
+            sorted_indices = np.argsort(y_true_array)
+            y_true_sorted = y_true_array[sorted_indices]
+            y_pred_sorted = y_pred_array[sorted_indices]
+            
+            indices = range(len(y_true_sorted))
+            ax.plot(indices, y_true_sorted, 'o-', color='#2ca02c', linewidth=2, markersize=5,
+                    label='Real', alpha=0.8)
+            ax.plot(indices, y_pred_sorted, 's--', color='#ff7f0e', linewidth=2, markersize=5,
+                    label='Predito', alpha=0.8)
+            
+            ax.set_xlabel('Observação (ordenada)', fontsize=11, fontweight='bold')
+            ax.set_ylabel('Valor', fontsize=11, fontweight='bold')
+            ax.set_title('Comparação Real vs Predito', fontsize=13, fontweight='bold', pad=10)
+            ax.legend(loc='best', framealpha=0.9)
+            ax.grid(True, alpha=0.3, linestyle='--')
         
         fig.tight_layout()
         
@@ -816,10 +1238,11 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
         
         method = self.method_var.get()
         
-        if method == "holdout":
-            cm = self.results['metrics_test']['confusion_matrix']
-        else:
+        # Modelo carregado ou K-Fold
+        if self.results.get('loaded_model', False) or method == "kfold":
             cm = self.results['metrics']['confusion_matrix']
+        else:  # Holdout
+            cm = self.results['metrics_test']['confusion_matrix']
         
         np = get_numpy()
         cm_array = np.array(cm)
