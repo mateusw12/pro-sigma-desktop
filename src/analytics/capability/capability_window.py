@@ -4,11 +4,10 @@ Allows user to perform Cp/Cpk and Pp/Ppk analysis on selected data
 """
 import customtkinter as ctk
 from tkinter import messagebox
-from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib
-from src.utils.ui_components import add_chart_export_button, get_scipy_stats
+from src.utils.lazy_imports import get_pandas, get_numpy, get_matplotlib_figure, get_matplotlib_backend, get_matplotlib, get_scipy_stats
 from src.utils.ui_components import (
+    add_chart_export_button,
     create_minitab_style_table,
-    create_variable_selector,
     create_action_button
 )
 
