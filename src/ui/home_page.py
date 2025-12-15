@@ -400,7 +400,7 @@ class HomePage(ctk.CTkFrame):
                 'title': 'StackUp',
                 'description': 'Análise de tolerâncias 2D',
                 'plan': 'intermediate',
-                'in_development': True  # Em desenvolvimento
+                'in_development': False  # Implementado
             },
             'doe': {
                 'title': 'DOE',
@@ -780,10 +780,15 @@ class HomePage(ctk.CTkFrame):
         Args:
             feature_id: ID da ferramenta
         """
-        # Monte Carlo doesn't need data input
+        # Monte Carlo and Stack-Up don't need data input
         if feature_id == 'monte_carlo':
             from src.analytics.monte_carlo.monte_carlo_window import MonteCarloWindow
             MonteCarloWindow(self)
+            return
+        
+        if feature_id == 'stackup':
+            from src.analytics.stack_up.stack_up_window import StackUpWindow
+            StackUpWindow(self)
             return
         
         # Check if there's any data available (current or historical)
