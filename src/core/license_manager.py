@@ -19,7 +19,7 @@ class LicenseManager:
             'features': [
                 'variability', 'process_capability', 'hypothesis_test',
                 'distribution_test', 'cov_ems',
-                'descriptive_stats'
+                'descriptive_stats', 'ishikawa'
             ]
         },
         'intermediate': {
@@ -28,7 +28,8 @@ class LicenseManager:
                 'variability', 'process_capability', 'hypothesis_test',
                 'distribution_test', 'cov_ems',
                 'text_analysis', 'normalization_test', 'control_charts', 
-                'dashboard', 'monte_carlo', 'cov_ems', 'descriptive_stats'
+                'dashboard', 'monte_carlo', 'cov_ems', 'descriptive_stats',
+                'ishikawa'
             ]
         },
         'pro': {
@@ -40,7 +41,8 @@ class LicenseManager:
                 'dashboard', 'monte_carlo',
                 'simple_regression', 'multiple_regression', 'multivariate',
                 'stackup', 'doe', 'space_filling', 'warranty_costs',
-                'neural_networks', 'decision_tree', 'descriptive_stats'
+                'neural_networks', 'decision_tree', 'descriptive_stats',
+                'ishikawa'
             ]
         }
     }

@@ -342,6 +342,12 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'basic',
                 'in_development': False
             },
+            'ishikawa': {
+                'title': 'Diagrama de Ishikawa',
+                'description': 'Diagrama de Causa e Efeito (Espinha de Peixe)',
+                'plan': 'basic',
+                'in_development': False
+            },
             'normalization_test': {
                 'title': 'Testes de Normalidade',
                 'description': 'Shapiro-Wilk, Jarque-Bera, Kolmogorov-Smirnov',
@@ -502,7 +508,8 @@ class HomePage(ctk.CTkFrame):
             'control_charts': '📊', 'dashboard': '📊', 'monte_carlo': '🎲',
             'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '🔄',
             'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'warranty_costs': '💰',
-            'neural_networks': '🧠', 'decision_tree': '🌳', 'descriptive_stats': '📊'
+            'neural_networks': '🧠', 'decision_tree': '🌳', 'descriptive_stats': '📊',
+            'ishikawa': '🐟'
         }
         
         for idx, (feature_id, tool_info) in enumerate(tools_list):
@@ -780,7 +787,7 @@ class HomePage(ctk.CTkFrame):
         Args:
             feature_id: ID da ferramenta
         """
-        # Monte Carlo and Stack-Up don't need data input
+        # Monte Carlo, Stack-Up, and Ishikawa don't need data input
         if feature_id == 'monte_carlo':
             from src.analytics.monte_carlo.monte_carlo_window import MonteCarloWindow
             MonteCarloWindow(self)
@@ -789,6 +796,11 @@ class HomePage(ctk.CTkFrame):
         if feature_id == 'stackup':
             from src.analytics.stack_up.stack_up_window import StackUpWindow
             StackUpWindow(self)
+            return
+        
+        if feature_id == 'ishikawa':
+            from src.analytics.ishikawa.ishikawa_window import IshikawaDiagramWindow
+            IshikawaDiagramWindow(self)
             return
         
         # Check if there's any data available (current or historical)
