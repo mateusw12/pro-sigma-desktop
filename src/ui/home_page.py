@@ -398,9 +398,9 @@ class HomePage(ctk.CTkFrame):
             },
             'multivariate': {
                 'title': 'Análise Multivariada',
-                'description': 'PCA, Análise Fatorial, Cluster',
+                'description': 'Matriz de Correlação e Scatter Plot Matrix',
                 'plan': 'pro',
-                'in_development': True  # Em desenvolvimento
+                'in_development': False
             },
             'stackup': {
                 'title': 'StackUp',
@@ -506,7 +506,7 @@ class HomePage(ctk.CTkFrame):
             'distribution_test': '📉', 'cov_ems': '📐', 'distribution_analysis': '📊',
             'analytics': '🔍', 'text_analysis': '📝', 'normalization_test': '✓',
             'control_charts': '📊', 'dashboard': '📊', 'monte_carlo': '🎲',
-            'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '🔄',
+            'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '�',
             'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'warranty_costs': '💰',
             'neural_networks': '🧠', 'decision_tree': '🌳', 'descriptive_stats': '📊',
             'ishikawa': '🐟'
@@ -861,6 +861,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'multiple_regression':
                 from src.analytics.multiple_regression.multiple_regression_window import MultipleRegressionWindow
                 MultipleRegressionWindow(self, selected_data)
+            elif feature_id == 'multivariate':
+                from src.analytics.multivariate.multivariate_window import MultivariateWindow
+                MultivariateWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
