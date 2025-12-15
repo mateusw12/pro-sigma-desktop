@@ -438,6 +438,12 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'pro',
                 'in_development': False 
             },
+            'ccd': {
+                'title': 'Central Composite Design',
+                'description': 'Gerar experimentos CCD/Box-Behnken e análise com ANOVA',
+                'plan': 'pro',
+                'in_development': False
+            },
         }
         
         # Obtém features disponíveis
@@ -508,8 +514,8 @@ class HomePage(ctk.CTkFrame):
             'control_charts': '📊', 'dashboard': '📊', 'monte_carlo': '🎲',
             'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '�',
             'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'nonlinear': '📉',
-            'neural_networks': '🧠', 'decision_tree': '🌳', 'descriptive_stats': '📊',
-            'ishikawa': '🐟'
+            'ccd': '🎯', 'neural_networks': '🧠', 'decision_tree': '🌳', 
+            'descriptive_stats': '📊', 'ishikawa': '🐟'
         }
         
         for idx, (feature_id, tool_info) in enumerate(tools_list):
@@ -870,6 +876,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'nonlinear':
                 from src.analytics.nonlinear.nonlinear_window import NonlinearWindow
                 NonlinearWindow(self, selected_data)
+            elif feature_id == 'ccd':
+                from src.analytics.ccd.ccd_window import CCDWindow
+                CCDWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
