@@ -111,6 +111,26 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
         self.y_column_frame = ctk.CTkScrollableFrame(y_frame, height=120)
         self.y_column_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         
+        # === Colunas Categóricas ===
+        categorical_frame = ctk.CTkFrame(config_frame)
+        categorical_frame.pack(fill="x", padx=20, pady=10)
+        
+        ctk.CTkLabel(
+            categorical_frame,
+            text="📋 Seleção de Colunas Categóricas (para Encoding):",
+            font=ctk.CTkFont(size=13, weight="bold")
+        ).pack(anchor="w", pady=(10, 5), padx=10)
+        
+        ctk.CTkLabel(
+            categorical_frame,
+            text="Marque as colunas que contêm dados categóricos (texto, categorias)",
+            font=ctk.CTkFont(size=10),
+            text_color="gray"
+        ).pack(anchor="w", pady=(0, 5), padx=10)
+        
+        self.categorical_columns_frame = ctk.CTkScrollableFrame(categorical_frame, height=100)
+        self.categorical_columns_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        
         # === Opções ===
         options_frame = ctk.CTkFrame(config_frame)
         options_frame.pack(fill="x", padx=20, pady=10)
@@ -367,6 +387,21 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
                 value=col
             )
             radio.pack(anchor="w", padx=5, pady=2)
+        
+        # Checkboxes para colunas categóricas
+        # Detecta automaticamente colunas com tipo object ou category
+        self.categorical_column_vars = {}
+        auto_categorical = self.data.select_dtypes(include=['object', 'category']).columns.tolist()
+        
+        for col in all_cols:
+            var = tk.BooleanVar(value=(col in auto_categorical))
+            check = ctk.CTkCheckBox(
+                self.categorical_columns_frame,
+                text=col,
+                variable=var
+            )
+            check.pack(anchor="w", padx=5, pady=2)
+            self.categorical_column_vars[col] = var
     
     def _train_network(self):
         """Treina a rede neural"""
@@ -383,9 +418,8 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
             messagebox.showwarning("Aviso", "A variável Y não pode estar em X")
             return
         
-        # Identifica colunas categóricas
-        pd = get_pandas()
-        categorical_cols = self.data[x_columns].select_dtypes(include=['object', 'category']).columns.tolist()
+        # Obtém colunas categóricas selecionadas pelo usuário
+        categorical_cols = [col for col, var in self.categorical_column_vars.items() if var.get() and col in x_columns]
         
         try:
             # Mostra loading
@@ -546,8 +580,8 @@ class NeuralNetworkWindow(ctk.CTkToplevel):
             x_columns = [col for col, var in self.x_column_vars.items() if var.get()]
             y_column = self.y_column_var.get()
             
-            pd = get_pandas()
-            categorical_cols = self.data[x_columns].select_dtypes(include=['object', 'category']).columns.tolist()
+            # Obtém colunas categóricas selecionadas pelo usuário
+            categorical_cols = [col for col, var in self.categorical_column_vars.items() if var.get() and col in x_columns]
             
             # Prepara dados para salvar
             model_data = {
