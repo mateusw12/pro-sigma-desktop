@@ -331,7 +331,7 @@ class HomePage(ctk.CTkFrame):
                 'in_development': False
             },
             'cov_ems': {
-                'title': 'COV EMS',
+                'title': 'COV',
                 'description': 'Análise de coeficiente de variação',
                 'plan': 'basic',
                 'in_development': False
@@ -870,8 +870,8 @@ class HomePage(ctk.CTkFrame):
                 from src.analytics.capability.capability_window import CapabilityWindow
                 capability_window = CapabilityWindow(self, selected_data)
             elif feature_id == 'cov_ems':
-                from src.analytics.cov.cov_window import CovEmsWindow
-                cov_window = CovEmsWindow(self, selected_data)
+                from src.analytics.cov.cov_window import CovWindow
+                cov_window = CovWindow(self, selected_data)
             elif feature_id == 'hypothesis_test':
                 from src.analytics.hypothesis_test.hypothesis_test_window import HypothesisTestWindow
                 hypothesis_window = HypothesisTestWindow(self, selected_data)

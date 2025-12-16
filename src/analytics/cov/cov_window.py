@@ -1,6 +1,6 @@
 """
-COV EMS Analysis Window
-Component of Variance - Expected Mean Squares
+COV Analysis Window
+Component of Variance
 Supports both Nested (Hierarchical) and Crossed analysis
 """
 import customtkinter as ctk
@@ -10,7 +10,7 @@ from src.utils.lazy_imports import (
     get_matplotlib_figure, get_matplotlib_backend,
     get_statsmodels_api, get_statsmodels_formula
 )
-from src.utils.ui_components import create_action_button, add_chart_export_button
+from src.utils.ui_components import create_action_button, add_chart_export_button, create_horizontal_stats_table, create_horizontal_stats_table
 from typing import List, Dict
 
 from src.analytics.cov.cov_utils import (
@@ -26,7 +26,10 @@ from src.analytics.cov.cov_utils import (
     check_balanced,
     calculate_mean_square,
     calculate_percent_total,
-    get_replace_label_crossed
+    get_replace_label_crossed,
+    calculate_variance_reml,
+    compare_ems_reml,
+    prepare_variance_chart_data
 )
 
 # Lazy-loaded libraries
@@ -54,7 +57,7 @@ def _ensure_libs():
     return _pd, _np, _stats, _plt, _Figure, _FigureCanvasTkAgg, _sm, _smf
 
 
-class CovEmsWindow(ctk.CTkToplevel):
+class CovWindow(ctk.CTkToplevel):
     def __init__(self, parent, df):
         super().__init__(parent)
 
@@ -74,7 +77,7 @@ class CovEmsWindow(ctk.CTkToplevel):
         self.analysis_type = "crossed"  # crossed ou nested
         
         # Window configuration
-        self.title("Análise COV EMS - Componentes de Variância")
+        self.title("Análise COV - Componentes de Variância")
         
         # Allow resizing
         self.resizable(True, True)
@@ -97,7 +100,7 @@ class CovEmsWindow(ctk.CTkToplevel):
         # Title
         title = ctk.CTkLabel(
             self.main_container,
-            text="📊 Análise COV EMS - Componentes de Variância",
+            text="📊 Análise COV - Componentes de Variância",
             font=ctk.CTkFont(size=24, weight="bold")
         )
         title.pack(pady=(0, 20))
@@ -135,6 +138,42 @@ class CovEmsWindow(ctk.CTkToplevel):
             variable=self.analysis_type_var,
             value="nested",
             command=self.on_analysis_type_change
+        ).pack(side="left", padx=10)
+        
+        # Estimation Method Section
+        method_section = ctk.CTkFrame(config_frame)
+        method_section.pack(fill="x", padx=20, pady=(0, 20))
+        
+        ctk.CTkLabel(
+            method_section,
+            text="Método de Estimação",
+            font=ctk.CTkFont(size=16, weight="bold")
+        ).pack(anchor="w", pady=(0, 10))
+        
+        method_frame = ctk.CTkFrame(method_section, fg_color="transparent")
+        method_frame.pack(fill="x", pady=5)
+        
+        self.estimation_method_var = ctk.StringVar(value="EMS")
+        
+        ctk.CTkRadioButton(
+            method_frame,
+            text="EMS (Expected Mean Squares) - ANOVA tradicional",
+            variable=self.estimation_method_var,
+            value="EMS"
+        ).pack(side="left", padx=10)
+        
+        ctk.CTkRadioButton(
+            method_frame,
+            text="REML (Restricted Maximum Likelihood) - Modelos mistos",
+            variable=self.estimation_method_var,
+            value="REML"
+        ).pack(side="left", padx=10)
+        
+        ctk.CTkRadioButton(
+            method_frame,
+            text="Comparar EMS vs REML",
+            variable=self.estimation_method_var,
+            value="BOTH"
         ).pack(side="left", padx=10)
         
         # Column Selection Section
@@ -225,7 +264,7 @@ class CovEmsWindow(ctk.CTkToplevel):
         # Botão padronizado
         self.calculate_btn = create_action_button(
             button_frame,
-            text="Calcular COV EMS",
+            text="Calcular COV",
             command=self.calculate_cov,
             icon="🔍"
         )
@@ -295,6 +334,7 @@ class CovEmsWindow(ctk.CTkToplevel):
             x_cols = [col for col, var in self.x_vars if var.get() == "on"]
             y_cols = [col for col, var in self.y_vars if var.get() == "on"]
             analysis_type = self.analysis_type_var.get()
+            estimation_method = self.estimation_method_var.get()
             
             # Prepare data
             all_cols = x_cols + y_cols
@@ -318,13 +358,28 @@ class CovEmsWindow(ctk.CTkToplevel):
             self.results = {}
             
             for y_col in y_cols:
-                if analysis_type == "crossed":
-                    result = self.calculate_crossed(work_df, x_cols, y_col)
+                if estimation_method in ["EMS", "BOTH"]:
+                    # Calculate EMS (traditional ANOVA)
+                    if analysis_type == "crossed":
+                        ems_result = self.calculate_crossed(work_df, x_cols, y_col)
+                    else:
+                        ems_result = self.calculate_nested(work_df, x_cols, y_col)
                 else:
-                    result = self.calculate_nested(work_df, x_cols, y_col)
+                    ems_result = None
                 
-                if result:
-                    self.results[y_col] = result
+                if estimation_method in ["REML", "BOTH"]:
+                    # Calculate REML (mixed models)
+                    reml_result = self.calculate_reml(work_df, x_cols, y_col, analysis_type)
+                else:
+                    reml_result = None
+                
+                # Store results
+                if ems_result or reml_result:
+                    self.results[y_col] = {
+                        'ems': ems_result,
+                        'reml': reml_result,
+                        'method': estimation_method
+                    }
             
             # Display results
             self.display_results(is_balanced)
@@ -335,7 +390,7 @@ class CovEmsWindow(ctk.CTkToplevel):
             import traceback
             traceback.print_exc()
         finally:
-            self.calculate_btn.configure(state="normal", text="🔍 Calcular COV EMS")
+            self.calculate_btn.configure(state="normal", text="🔍 Calcular COV")
     
     def calculate_crossed(self, df, x_cols: List[str], y_col: str) -> Dict:
         """Calculate crossed (factorial) analysis"""
@@ -492,6 +547,40 @@ class CovEmsWindow(ctk.CTkToplevel):
             "has_negative": has_negative
         }
     
+    def calculate_reml(self, df, x_cols: List[str], y_col: str, analysis_type: str) -> Dict:
+        """Calculate variance components using REML method"""
+        try:
+            reml_result = calculate_variance_reml(df, y_col, x_cols, method=analysis_type)
+            
+            if reml_result.get('error'):
+                return {
+                    "type": "reml",
+                    "error": reml_result['error']
+                }
+            
+            # Convert REML format to display format
+            variances = []
+            for comp_name, comp_data in reml_result['variances'].items():
+                if comp_name != 'total':
+                    variances.append({
+                        "key": comp_name,
+                        "variance": comp_data['variance'],
+                        "desvpad": comp_data['desvpad'],
+                        "total": comp_data['percentage']
+                    })
+            
+            return {
+                "type": "reml",
+                "variances": variances,
+                "model_info": reml_result['model_info'],
+                "has_negative": any(v['variance'] < 0 for v in variances)
+            }
+        except Exception as e:
+            return {
+                "type": "reml",
+                "error": str(e)
+            }
+    
     def display_results(self, is_balanced: bool):
         """Display calculation results"""
         # Clear previous results
@@ -504,7 +593,7 @@ class CovEmsWindow(ctk.CTkToplevel):
         # Results title
         title = ctk.CTkLabel(
             self.results_container,
-            text="📈 Resultados da Análise COV EMS",
+            text="📈 Resultados da Análise COV",
             font=ctk.CTkFont(size=20, weight="bold")
         )
         title.pack(pady=(10, 10))
@@ -537,23 +626,183 @@ class CovEmsWindow(ctk.CTkToplevel):
     
     def display_result_for_response(self, parent, result_data: Dict, response_name: str):
         """Display results for a single response"""
+        method = result_data.get('method', 'EMS')
+        
+        if method == 'BOTH':
+            # Display EMS and REML side by side
+            self.display_comparison_results(parent, result_data, response_name)
+        else:
+            # Display single method
+            content_frame = ctk.CTkFrame(parent)
+            content_frame.pack(fill="both", expand=True, padx=10, pady=10)
+            
+            # Determine which result to use
+            single_result = result_data.get('ems') if method == 'EMS' else result_data.get('reml')
+            
+            if not single_result:
+                ctk.CTkLabel(
+                    content_frame,
+                    text=f"❌ Erro ao calcular pelo método {method}",
+                    font=ctk.CTkFont(size=14)
+                ).pack(pady=20)
+                return
+            
+            # Left side - Tables
+            left_frame = ctk.CTkFrame(content_frame)
+            left_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
+            
+            # Right side - Chart
+            right_frame = ctk.CTkFrame(content_frame)
+            right_frame.pack(side="left", fill="both", expand=True)
+            
+            # Display tables based on type
+            if single_result.get("type") == "crossed":
+                self.display_crossed_tables(left_frame, single_result)
+            elif single_result.get("type") == "reml":
+                self.display_reml_table(left_frame, single_result)
+            else:  # nested
+                self.display_nested_table(left_frame, single_result)
+            
+            self.display_variance_chart(right_frame, single_result, response_name)
+    
+    def display_comparison_results(self, parent, result_data: Dict, response_name: str):
+        """Display comparison between EMS and REML"""
         content_frame = ctk.CTkFrame(parent)
         content_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Left side - Tables
-        left_frame = ctk.CTkFrame(content_frame)
-        left_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
+        # Title
+        ctk.CTkLabel(
+            content_frame,
+            text="📊 Comparação EMS vs REML",
+            font=ctk.CTkFont(size=18, weight="bold")
+        ).pack(pady=10)
         
-        # Right side - Chart
-        right_frame = ctk.CTkFrame(content_frame)
-        right_frame.pack(side="left", fill="both", expand=True)
+        # Top section - Tables
+        tables_frame = ctk.CTkFrame(content_frame)
+        tables_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
-        if result_data["type"] == "crossed":
-            self.display_crossed_tables(left_frame, result_data)
-        else:
-            self.display_nested_table(left_frame, result_data)
+        # EMS on left
+        ems_frame = ctk.CTkFrame(tables_frame)
+        ems_frame.pack(side="left", fill="both", expand=True, padx=(0, 5))
         
-        self.display_variance_chart(right_frame, result_data, response_name)
+        ctk.CTkLabel(
+            ems_frame,
+            text="📈 EMS (ANOVA)",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(pady=5)
+        
+        ems_result = result_data.get('ems')
+        if ems_result:
+            if ems_result.get("type") == "crossed":
+                self.display_crossed_tables(ems_frame, ems_result)
+            else:
+                self.display_nested_table(ems_frame, ems_result)
+        
+        # REML on right
+        reml_frame = ctk.CTkFrame(tables_frame)
+        reml_frame.pack(side="left", fill="both", expand=True, padx=(5, 0))
+        
+        ctk.CTkLabel(
+            reml_frame,
+            text="📉 REML (Mixed Models)",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(pady=5)
+        
+        reml_result = result_data.get('reml')
+        if reml_result:
+            self.display_reml_table(reml_frame, reml_result)
+        
+        # Bottom section - Charts comparison
+        charts_frame = ctk.CTkFrame(content_frame)
+        charts_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        if ems_result:
+            ems_chart_frame = ctk.CTkFrame(charts_frame)
+            ems_chart_frame.pack(side="left", fill="both", expand=True, padx=(0, 5))
+            self.display_variance_chart(ems_chart_frame, ems_result, f"{response_name} (EMS)")
+        
+        if reml_result:
+            reml_chart_frame = ctk.CTkFrame(charts_frame)
+            reml_chart_frame.pack(side="left", fill="both", expand=True, padx=(5, 0))
+            self.display_variance_chart(reml_chart_frame, reml_result, f"{response_name} (REML)")
+    
+    def display_reml_table(self, parent, result_data: Dict):
+        """Display REML variance components table"""
+        table_frame = ctk.CTkFrame(parent)
+        table_frame.pack(fill="both", expand=True, pady=10)
+        
+        if result_data.get('error'):
+            ctk.CTkLabel(
+                table_frame,
+                text=f"❌ Erro: {result_data['error']}",
+                font=ctk.CTkFont(size=12),
+                text_color="red"
+            ).pack(pady=20)
+            return
+        
+        # Preparar dados para tabela horizontal
+        rows_data = []
+        total_variance = 0
+        
+        for row in result_data["variances"]:
+            variance_val = row.get("variance", 0)
+            total_variance += variance_val
+            
+            rows_data.append({
+                "Componente": row["key"],
+                "Variância": f"{variance_val:.6f}",
+                "Desvio Padrão": f"{row['desvpad']:.6f}",
+                "% do Total": f"{row['total']:.2f}%"
+            })
+        
+        # Adicionar linha de Total
+        rows_data.append({
+            "Componente": "Total",
+            "Variância": f"{total_variance:.6f}",
+            "Desvio Padrão": "",
+            "% do Total": "100.00%"
+        })
+        
+        # Criar tabela horizontal padrão
+        create_horizontal_stats_table(
+            table_frame,
+            columns=["Componente", "Variância", "Desvio Padrão", "% do Total"],
+            rows_data=rows_data,
+            title="Componentes de Variância (REML)"
+        )
+        
+        # Model info
+        if result_data.get('model_info'):
+            info = result_data['model_info']
+            info_frame = ctk.CTkFrame(table_frame)
+            info_frame.pack(fill="x", padx=10, pady=10)
+            
+            ctk.CTkLabel(
+                info_frame,
+                text="📋 Informações do Modelo REML",
+                font=ctk.CTkFont(size=12, weight="bold")
+            ).pack(pady=5)
+            
+            # Formatar valores numéricos com segurança
+            log_like = info.get('log_likelihood', 'N/A')
+            aic = info.get('aic', 'N/A')
+            bic = info.get('bic', 'N/A')
+            
+            log_like_str = f"{log_like:.4f}" if isinstance(log_like, (int, float)) else str(log_like)
+            aic_str = f"{aic:.4f}" if isinstance(aic, (int, float)) else str(aic)
+            bic_str = f"{bic:.4f}" if isinstance(bic, (int, float)) else str(bic)
+            
+            info_text = f"Log-Likelihood: {log_like_str}\n"
+            info_text += f"AIC: {aic_str}\n"
+            info_text += f"BIC: {bic_str}\n"
+            info_text += f"Convergência: {'✓ Sim' if info.get('converged') else '✗ Não'}"
+            
+            ctk.CTkLabel(
+                info_frame,
+                text=info_text,
+                font=ctk.CTkFont(size=11),
+                justify="left"
+            ).pack(pady=5)
     
     def display_crossed_tables(self, parent, result_data: Dict):
         """Display ANOVA and variance tables for crossed analysis"""
@@ -613,39 +862,29 @@ class CovEmsWindow(ctk.CTkToplevel):
         
         # Variance Components Table
         var_frame = ctk.CTkFrame(parent)
-        var_frame.pack(fill="x", pady=(0, 20))
+        var_frame.pack(fill="both", expand=True, pady=10)
         
-        ctk.CTkLabel(
+        # Preparar dados para tabela horizontal
+        rows_data = []
+        
+        for row in result_data["variances"]:
+            rows_data.append({
+                "Componente": row["key"],
+                "% do Total": f"{row['total']:.2f}%" if isinstance(row['total'], (int, float)) else ""
+            })
+        
+        # Criar tabela horizontal padrão
+        create_horizontal_stats_table(
             var_frame,
-            text="Componentes de Variância",
-            font=ctk.CTkFont(size=16, weight="bold")
-        ).pack(pady=10)
-        
-        var_table_frame = ctk.CTkFrame(var_frame)
-        var_table_frame.pack(fill="x", padx=10, pady=(0, 10))
-        
-        # Headers
-        ctk.CTkLabel(var_table_frame, text="Componente", font=ctk.CTkFont(weight="bold"), width=200).grid(row=0, column=0, padx=5, pady=5)
-        ctk.CTkLabel(var_table_frame, text="% Total", font=ctk.CTkFont(weight="bold"), width=150).grid(row=0, column=1, padx=5, pady=5)
-        
-        # Data
-        for idx, row in enumerate(result_data["variances"], start=1):
-            # Bold text for Total row
-            font_weight = "bold" if row["key"] == "Total" else "normal"
-            ctk.CTkLabel(var_table_frame, text=row["key"], width=200, font=ctk.CTkFont(weight=font_weight)).grid(row=idx, column=0, padx=5, pady=3)
-            total_text = f"{row['total']:.2f}%" if isinstance(row['total'], (int, float)) else ""
-            ctk.CTkLabel(var_table_frame, text=total_text, width=150, font=ctk.CTkFont(weight=font_weight)).grid(row=idx, column=1, padx=5, pady=3)
+            columns=["Componente", "% do Total"],
+            rows_data=rows_data,
+            title="Componentes de Variância"
+        )
     
     def display_nested_table(self, parent, result_data: Dict):
         """Display variance table for nested analysis"""
         var_frame = ctk.CTkFrame(parent)
-        var_frame.pack(fill="x", pady=(0, 20))
-        
-        ctk.CTkLabel(
-            var_frame,
-            text="Componentes de Variância (Nested)",
-            font=ctk.CTkFont(size=16, weight="bold")
-        ).pack(pady=10)
+        var_frame.pack(fill="both", expand=True, pady=10)
         
         # Warning for negative variances
         if result_data.get("has_negative"):
@@ -657,31 +896,37 @@ class CovEmsWindow(ctk.CTkToplevel):
             )
             warning_label.pack(pady=(0, 10))
         
-        var_table_frame = ctk.CTkFrame(var_frame)
-        var_table_frame.pack(fill="x", padx=10, pady=(0, 10))
+        # Preparar dados para tabela horizontal
+        rows_data = []
+        total_variance = 0
         
-        # Headers
-        headers = ["Componente", "Variância", "Desvio Padrão", "% Total"]
-        for col, header in enumerate(headers):
-            ctk.CTkLabel(
-                var_table_frame,
-                text=header,
-                font=ctk.CTkFont(weight="bold"),
-                width=120
-            ).grid(row=0, column=col, padx=5, pady=5)
+        for row in result_data["variances"]:
+            if row["key"] != "Total":
+                variance_val = row.get("variance", 0)
+                total_variance += max(0, variance_val)  # Somar apenas valores positivos
+                
+                rows_data.append({
+                    "Componente": row["key"],
+                    "Variância": f"{max(0, variance_val):.6f}",
+                    "Desvio Padrão": f"{row['desvpad']:.6f}" if isinstance(row.get('desvpad'), (int, float)) else "",
+                    "% do Total": f"{row['total']:.2f}%" if isinstance(row.get('total'), (int, float)) else ""
+                })
         
-        # Data
-        for idx, row in enumerate(result_data["variances"], start=1):
-            ctk.CTkLabel(var_table_frame, text=row["key"], width=120).grid(row=idx, column=0, padx=5, pady=3)
-            
-            var_text = f"{max(0, row['variance']):.4e}" if isinstance(row.get('variance'), (int, float)) else ""
-            ctk.CTkLabel(var_table_frame, text=var_text, width=120).grid(row=idx, column=1, padx=5, pady=3)
-            
-            std_text = f"{row['desvpad']:.4e}" if isinstance(row.get('desvpad'), (int, float)) else ""
-            ctk.CTkLabel(var_table_frame, text=std_text, width=120).grid(row=idx, column=2, padx=5, pady=3)
-            
-            total_text = f"{row['total']:.2f}%" if isinstance(row.get('total'), (int, float)) else ""
-            ctk.CTkLabel(var_table_frame, text=total_text, width=120).grid(row=idx, column=3, padx=5, pady=3)
+        # Adicionar linha de Total
+        rows_data.append({
+            "Componente": "Total",
+            "Variância": f"{total_variance:.6f}",
+            "Desvio Padrão": "",
+            "% do Total": "100.00%"
+        })
+        
+        # Criar tabela horizontal padrão
+        create_horizontal_stats_table(
+            var_frame,
+            columns=["Componente", "Variância", "Desvio Padrão", "% do Total"],
+            rows_data=rows_data,
+            title="Componentes de Variância (Nested)"
+        )
     
     def display_variance_chart(self, parent, result_data: Dict, response_name: str):
         """Display variance components bar chart and pie chart"""
@@ -694,17 +939,13 @@ class CovEmsWindow(ctk.CTkToplevel):
             font=ctk.CTkFont(size=14, weight="bold")
         ).pack(pady=5)
         
-        # Prepare data
+        # Prepare data - INCLUIR TOTAL
         labels = []
         values = []
-        total_row = None
         
         for row in result_data["variances"]:
-            if row["key"] == "Total":
-                total_row = row
-            else:
-                labels.append(row["key"])
-                values.append(row["total"] if isinstance(row["total"], (int, float)) else 0)
+            labels.append(row["key"])
+            values.append(row["total"] if isinstance(row["total"], (int, float)) else 0)
         
         # Sort by value
         sorted_data = sorted(zip(labels, values), key=lambda x: x[1])
@@ -738,11 +979,11 @@ class CovEmsWindow(ctk.CTkToplevel):
         # 2. Pie Chart
         ax2 = fig.add_subplot(122)
         
-        # Filtrar apenas valores positivos para o gráfico de pizza
+        # Filtrar apenas valores positivos e excluir "Total" para o gráfico de pizza
         pie_labels = []
         pie_values = []
         for i, val in enumerate(values):
-            if val > 0:
+            if val > 0 and labels[i].lower() != "total":
                 pie_labels.append(labels[i])
                 pie_values.append(val)
         

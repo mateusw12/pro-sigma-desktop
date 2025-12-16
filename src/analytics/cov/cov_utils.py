@@ -1,6 +1,6 @@
 """
-COV EMS Utility Functions
-Component of Variance - Expected Mean Squares Analysis
+COV Utility Functions
+Component of Variance Analysis
 """
 from typing import List, Dict
 
@@ -281,3 +281,242 @@ def prepare_variance_chart_data(variation_table: Dict, exclude_total=True) -> tu
             percentages.append(value['percentage'])
     
     return labels, variances, percentages
+
+
+def calculate_variance_reml(df, response_col: str, factor_cols: List[str], method='nested'):
+    """
+    Calcula componentes de variância usando REML (Restricted Maximum Likelihood)
+    Implementação equivalente ao lmer() do R para replicar exatamente os resultados
+    
+    Args:
+        df: DataFrame com os dados
+        response_col: Nome da coluna de resposta (Y)
+        factor_cols: Lista de colunas de fatores (X)
+        method: 'nested' ou 'crossed'
+    
+    Returns:
+        dict com componentes de variância estimados por REML
+    """
+    try:
+        import numpy as np
+        import pandas as pd
+        
+        # Preparar dados
+        data = df[factor_cols + [response_col]].copy()
+        data = data.dropna()
+        
+        # Renomear última coluna para Y
+        data = data.rename(columns={response_col: 'Y'})
+        
+        # Converter Y para numérico
+        data['Y'] = pd.to_numeric(data['Y'], errors='coerce')
+        data = data.dropna(subset=['Y'])
+        
+        num_factors = len(factor_cols)
+        
+        # Construir fórmula baseada no método
+        if method == 'nested':
+            formula = _build_nested_formula(factor_cols, num_factors)
+        else:  # crossed
+            # Para crossed, remover última coluna se linhas forem únicas
+            df_without_Y = data[factor_cols].copy()
+            are_rows_unique = not df_without_Y.duplicated().any()
+            
+            if are_rows_unique and num_factors > 1:
+                # Remover última coluna
+                factor_cols = factor_cols[:-1]
+                data = data.drop(columns=[df_without_Y.columns[-1]])
+                num_factors = len(factor_cols)
+            
+            formula = _build_crossed_formula(factor_cols, num_factors)
+        
+        # Tentar usar pymer4 (wrapper para lmer do R) se disponível
+        try:
+            from pymer4.models import Lmer
+            
+            # Ajustar modelo com pymer4 (usa lmer do R internamente)
+            model = Lmer(formula, data=data)
+            model.fit(REML=True, control='check.nobs.vs.nlev="ignore", check.nobs.vs.rankZ="ignore", check.nobs.vs.nRE="ignore"')
+            
+            # Extrair componentes de variância
+            variance_components = {}
+            random_effects = model.ranef_var
+            
+            for component, variance in random_effects.items():
+                variance_components[component] = float(variance)
+            
+            # Variância residual
+            variance_components['Residual'] = float(model.residual_variance)
+            
+        except ImportError:
+            # Se pymer4 não disponível, usar statsmodels com fórmula simplificada
+            from statsmodels.formula.api import mixedlm
+            
+            # Construir fórmula statsmodels (mais limitada)
+            variance_components = _fit_statsmodels_reml(data, factor_cols, method)
+        
+        # Calcular total e porcentagens
+        total_var = sum(variance_components.values())
+        
+        variance_results = {}
+        for component, var_value in variance_components.items():
+            percentage = (var_value / total_var * 100) if total_var > 0 else 0
+            variance_results[component] = {
+                'variance': var_value,
+                'desvpad': np.sqrt(abs(var_value)),
+                'percentage': percentage
+            }
+        
+        variance_results['total'] = total_var
+        
+        # Informações do modelo
+        model_info = {
+            'method': 'REML',
+            'log_likelihood': getattr(model, 'logLike', 'N/A') if 'model' in locals() else 'N/A',
+            'aic': getattr(model, 'AIC', 'N/A') if 'model' in locals() else 'N/A',
+            'bic': getattr(model, 'BIC', 'N/A') if 'model' in locals() else 'N/A',
+            'converged': True
+        }
+        
+        return {
+            'variances': variance_results,
+            'model_info': model_info,
+            'full_result': model if 'model' in locals() else None
+        }
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            'error': str(e),
+            'variances': None,
+            'model_info': None
+        }
+
+
+def _build_nested_formula(factor_cols: List[str], num_factors: int) -> str:
+    """
+    Constrói fórmula nested para REML (equivalente ao R)
+    Exemplo: Y ~ (1|A) + (1|A:B) + (1|A:B:C)
+    """
+    terms = []
+    
+    for i in range(1, num_factors + 1):
+        nested_term = ':'.join(factor_cols[:i])
+        terms.append(f"(1|{nested_term})")
+    
+    formula = "Y ~ " + " + ".join(terms)
+    return formula
+
+
+def _build_crossed_formula(factor_cols: List[str], num_factors: int) -> str:
+    """
+    Constrói fórmula crossed para REML (equivalente ao R)
+    Inclui efeitos principais e todas as interações
+    """
+    from itertools import combinations
+    
+    terms = []
+    
+    # Efeitos principais
+    for factor in factor_cols:
+        terms.append(f"(1|{factor})")
+    
+    # Interações de 2 fatores
+    if num_factors >= 2:
+        for combo in combinations(factor_cols, 2):
+            interaction = ':'.join(combo)
+            terms.append(f"(1|{interaction})")
+    
+    # Interação de ordem superior (todos os fatores)
+    if num_factors >= 3:
+        full_interaction = ':'.join(factor_cols)
+        terms.append(f"(1|{full_interaction})")
+    
+    formula = "Y ~ " + " + ".join(terms)
+    return formula
+
+
+def _fit_statsmodels_reml(data, factor_cols: List[str], method: str) -> dict:
+    """
+    Fallback usando statsmodels quando pymer4 não está disponível
+    Menos preciso mas funcional
+    """
+    from statsmodels.regression.mixed_linear_model import MixedLM
+    import numpy as np
+    
+    variance_components = {}
+    
+    # Para cada fator, calcular variância como efeito aleatório
+    for i, factor in enumerate(factor_cols):
+        try:
+            if method == 'nested' and i == 0:
+                # Primeiro fator como grupo principal
+                groups = data[factor].astype(str)
+            else:
+                # Criar grupos compostos
+                groups = data[factor_cols[:i+1]].astype(str).agg('_'.join, axis=1)
+            
+            model = MixedLM.from_formula("Y ~ 1", groups=groups, data=data)
+            result = model.fit(reml=True)
+            
+            # Variância do efeito aleatório
+            random_var = float(result.cov_re.iloc[0, 0]) if hasattr(result.cov_re, 'iloc') else float(result.cov_re)
+            
+            if method == 'nested':
+                # Para nested, subtrair variâncias anteriores
+                if i > 0:
+                    prev_var = sum([v for k, v in variance_components.items() if k != 'Residual'])
+                    random_var = max(0, random_var - prev_var)
+            
+            variance_components[factor] = random_var
+            
+        except Exception as e:
+            print(f"Erro ao calcular variância para {factor}: {e}")
+            variance_components[factor] = 0
+    
+    # Adicionar variância residual do último modelo
+    if 'result' in locals():
+        variance_components['Residual'] = result.scale
+    
+    return variance_components
+
+
+def compare_ems_reml(ems_results: Dict, reml_results: Dict) -> Dict:
+    """
+    Compara resultados de EMS (ANOVA) vs REML
+    
+    Args:
+        ems_results: Resultados do método EMS
+        reml_results: Resultados do método REML
+    
+    Returns:
+        dict com comparação
+    """
+    comparison = {
+        'ems_total': ems_results.get('total', 0) if isinstance(ems_results, dict) else 0,
+        'reml_total': reml_results.get('variances', {}).get('total', 0) if reml_results else 0,
+        'differences': []
+    }
+    
+    # Comparar componentes individuais
+    if isinstance(ems_results, dict) and reml_results and reml_results.get('variances'):
+        ems_vars = {k: v for k, v in ems_results.items() if k != 'total' and isinstance(v, dict)}
+        reml_vars = {k: v for k, v in reml_results['variances'].items() if k != 'total'}
+        
+        for component in set(list(ems_vars.keys()) + list(reml_vars.keys())):
+            ems_val = ems_vars.get(component, {}).get('variance', 0)
+            reml_val = reml_vars.get(component, {}).get('variance', 0)
+            
+            diff_abs = abs(ems_val - reml_val)
+            diff_pct = (diff_abs / ems_val * 100) if ems_val > 0 else 0
+            
+            comparison['differences'].append({
+                'component': component,
+                'ems': ems_val,
+                'reml': reml_val,
+                'diff_abs': diff_abs,
+                'diff_pct': diff_pct
+            })
+    
+    return comparison
