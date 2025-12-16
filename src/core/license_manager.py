@@ -41,7 +41,7 @@ class LicenseManager:
                 'dashboard', 'monte_carlo',
                 'simple_regression', 'multiple_regression', 'multivariate',
                 'stackup', 'doe', 'space_filling', 'nonlinear', 'ccd',
-                'neural_networks', 'decision_tree', 'descriptive_stats',
+                'neural_networks', 'tree_models', 'descriptive_stats',
                 'ishikawa'
             ]
         }

@@ -426,11 +426,11 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'pro',
                 'in_development': False  # Implementado
             },
-            'decision_tree': {
-                'title': 'Árvore de Decisão',
-                'description': 'Análise de árvore de decisão',
+            'tree_models': {
+                'title': 'Modelos de Árvore',
+                'description': 'Decision Tree, Random Forest e Gradient Boosting',
                 'plan': 'pro',
-                'in_development': True  # Em desenvolvimento
+                'in_development': False  # Implementado
             },
             'nonlinear': {
                 'title': 'Regressão Não Linear',
@@ -882,6 +882,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'neural_networks':
                 from src.analytics.neural_network.neural_network_window import NeuralNetworkWindow
                 NeuralNetworkWindow(self, selected_data)
+            elif feature_id == 'tree_models':
+                from src.analytics.tree_models.tree_models_window import TreeModelsWindow
+                TreeModelsWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
