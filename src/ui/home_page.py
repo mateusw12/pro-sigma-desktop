@@ -438,6 +438,18 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'basic',
                 'in_development': False  # Implementado
             },
+            'run_chart': {
+                'title': 'Run Chart',
+                'description': 'Gráfico de Sequência com detecção de padrões e tendências',
+                'plan': 'basic',
+                'in_development': False  # Implementado
+            },
+            'pareto': {
+                'title': 'Gráfico de Pareto',
+                'description': 'Análise 80/20 e classificação ABC',
+                'plan': 'basic',
+                'in_development': False  # Implementado
+            },
             'nonlinear': {
                 'title': 'Regressão Não Linear',
                 'description': 'Análise de regressão não linear',
@@ -518,11 +530,11 @@ class HomePage(ctk.CTkFrame):
             'distribution_test': '📉', 'cov_ems': '📐', 'distribution_analysis': '📊',
             'analytics': '🔍', 'text_analysis': '📝', 'normalization_test': '✓',
             'control_charts': '📊', 'dashboard': '📊', 'monte_carlo': '🎲',
-            'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '�',
+            'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '🔍',
             'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'nonlinear': '📉',
             'ccd': '🎯', 'neural_networks': '🧠', 'decision_tree': '🌳', 
             'descriptive_stats': '📊', 'ishikawa': '🐟', 'tree_models': '🌳',
-            'gage_rr': '📏'
+            'gage_rr': '📏', 'run_chart': '📈', 'pareto': '📊'
         }
         
         for idx, (feature_id, tool_info) in enumerate(tools_list):
@@ -895,6 +907,12 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'gage_rr':
                 from src.analytics.msa.gage_rr_window import GageRRWindow
                 GageRRWindow(self, selected_data)
+            elif feature_id == 'run_chart':
+                from src.analytics.run_chart.run_chart_window import RunChartWindow
+                RunChartWindow(self, selected_data)
+            elif feature_id == 'pareto':
+                from src.analytics.pareto.pareto_window import ParetoWindow
+                ParetoWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
