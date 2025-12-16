@@ -42,7 +42,7 @@ class LicenseManager:
                 'simple_regression', 'multiple_regression', 'multivariate',
                 'stackup', 'doe', 'space_filling', 'nonlinear', 'ccd',
                 'neural_networks', 'tree_models', 'gage_rr', 'descriptive_stats',
-                'ishikawa', 'run_chart', 'pareto'
+                'ishikawa', 'run_chart', 'pareto', 'k_means'
             ]
         }
     }

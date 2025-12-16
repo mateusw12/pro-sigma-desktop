@@ -462,6 +462,12 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'pro',
                 'in_development': False
             },
+            'k_means': {
+                'title': 'K-Means Clustering',
+                'description': 'Agrupamento não supervisionado com método do cotovelo',
+                'plan': 'pro',
+                'in_development': False  # Implementado
+            },
         }
         
         # Obtém features disponíveis
@@ -534,7 +540,7 @@ class HomePage(ctk.CTkFrame):
             'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'nonlinear': '📉',
             'ccd': '🎯', 'neural_networks': '🧠', 'decision_tree': '🌳', 
             'descriptive_stats': '📊', 'ishikawa': '🐟', 'tree_models': '🌳',
-            'gage_rr': '📏', 'run_chart': '📈', 'pareto': '📊'
+            'gage_rr': '📏', 'run_chart': '📈', 'pareto': '📊', 'k_means': '🔵'
         }
         
         for idx, (feature_id, tool_info) in enumerate(tools_list):
@@ -913,6 +919,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'pareto':
                 from src.analytics.pareto.pareto_window import ParetoWindow
                 ParetoWindow(self, selected_data)
+            elif feature_id == 'k_means':
+                from src.analytics.clustering.k_means_window import KMeansWindow
+                KMeansWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
