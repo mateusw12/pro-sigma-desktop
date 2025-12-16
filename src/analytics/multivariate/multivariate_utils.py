@@ -5,6 +5,9 @@ Funções para análise multivariada com matriz de correlação
 
 from typing import Dict, List, Tuple
 from src.utils.lazy_imports import get_pandas, get_numpy
+from scipy import stats
+from scipy.cluster import hierarchy
+from scipy.spatial.distance import squareform
 
 
 def calculate_mean_column_values(df) -> Dict[str, float]:
@@ -183,3 +186,198 @@ def calculate_trendline(x_data: List[float], y_data: List[float]) -> List[float]
     intercept = (sum_y - slope * sum_x) / n
     
     return [slope * x + intercept for x in x_data]
+
+
+def calculate_correlation_with_pvalues(df):
+    """
+    Calcula matriz de correlação com p-values usando pandas
+    
+    Args:
+        df: DataFrame com dados numéricos
+    
+    Returns:
+        Tuple: (correlation_matrix, pvalue_matrix)
+    """
+    pd = get_pandas()
+    np = get_numpy()
+    
+    # Usar pandas corr() que é mais eficiente
+    corr_matrix = df.corr().values
+    
+    # Calcular p-values
+    n = len(df)
+    pvalue_matrix = np.zeros_like(corr_matrix)
+    
+    for i in range(corr_matrix.shape[0]):
+        for j in range(corr_matrix.shape[1]):
+            if i != j:
+                r = corr_matrix[i, j]
+                # t-statistic para correlação de Pearson
+                t_stat = r * np.sqrt(n - 2) / np.sqrt(1 - r**2) if abs(r) < 1 else 0
+                # p-value bilateral
+                pvalue = 2 * (1 - stats.t.cdf(abs(t_stat), n - 2))
+                pvalue_matrix[i, j] = pvalue
+            else:
+                pvalue_matrix[i, j] = 0  # Diagonal sempre 0
+    
+    return corr_matrix, pvalue_matrix
+
+
+def calculate_vif(df):
+    """
+    Calcula VIF (Variance Inflation Factor) para detectar multicolinearidade
+    
+    Args:
+        df: DataFrame com dados numéricos
+    
+    Returns:
+        Dict com VIF para cada variável
+    """
+    pd = get_pandas()
+    np = get_numpy()
+    from sklearn.linear_model import LinearRegression
+    
+    vif_data = {}
+    columns = df.columns.tolist()
+    
+    for i, col in enumerate(columns):
+        # Usar outras colunas como features
+        X = df.drop(columns=[col])
+        y = df[col]
+        
+        # Regressão linear
+        model = LinearRegression()
+        model.fit(X, y)
+        
+        # R²
+        r_squared = model.score(X, y)
+        
+        # VIF = 1 / (1 - R²)
+        if r_squared < 0.9999:  # Evitar divisão por zero
+            vif = 1 / (1 - r_squared)
+        else:
+            vif = np.inf
+        
+        vif_data[col] = vif
+    
+    return vif_data
+
+
+def calculate_hierarchical_clustering(corr_matrix, method='average'):
+    """
+    Calcula clustering hierárquico para agrupar variáveis correlacionadas
+    
+    Args:
+        corr_matrix: Matriz de correlação
+        method: Método de linkage ('average', 'complete', 'single')
+    
+    Returns:
+        Linkage matrix para dendrograma
+    """
+    np = get_numpy()
+    
+    # Converter correlação para distância: dist = 1 - |corr|
+    distance_matrix = 1 - np.abs(corr_matrix)
+    
+    # Converter para forma condensada
+    condensed_dist = squareform(distance_matrix, checks=False)
+    
+    # Clustering hierárquico
+    linkage_matrix = hierarchy.linkage(condensed_dist, method=method)
+    
+    return linkage_matrix
+
+
+def interpret_correlation(corr_value, pvalue):
+    """
+    Interpreta força e significância da correlação
+    
+    Args:
+        corr_value: Valor da correlação
+        pvalue: P-value da correlação
+    
+    Returns:
+        Dict com interpretação
+    """
+    # Força da correlação (regra de Cohen)
+    abs_corr = abs(corr_value)
+    
+    if abs_corr >= 0.9:
+        strength = 'Muito Forte'
+        color = 'darkgreen' if pvalue < 0.05 else 'green'
+    elif abs_corr >= 0.7:
+        strength = 'Forte'
+        color = 'green' if pvalue < 0.05 else 'lightgreen'
+    elif abs_corr >= 0.5:
+        strength = 'Moderada'
+        color = 'orange' if pvalue < 0.05 else 'yellow'
+    elif abs_corr >= 0.3:
+        strength = 'Fraca'
+        color = 'orange'
+    else:
+        strength = 'Muito Fraca'
+        color = 'lightgray'
+    
+    # Significância
+    if pvalue < 0.001:
+        significance = '***'
+        sig_text = 'Altamente significativo (p < 0.001)'
+    elif pvalue < 0.01:
+        significance = '**'
+        sig_text = 'Muito significativo (p < 0.01)'
+    elif pvalue < 0.05:
+        significance = '*'
+        sig_text = 'Significativo (p < 0.05)'
+    else:
+        significance = 'ns'
+        sig_text = 'Não significativo (p ≥ 0.05)'
+    
+    # Direção
+    direction = 'Positiva' if corr_value > 0 else 'Negativa' if corr_value < 0 else 'Nula'
+    
+    return {
+        'strength': strength,
+        'significance': significance,
+        'sig_text': sig_text,
+        'direction': direction,
+        'color': color,
+        'pvalue': pvalue
+    }
+
+
+def interpret_vif(vif_value):
+    """
+    Interpreta valor de VIF
+    
+    Args:
+        vif_value: Valor do VIF
+    
+    Returns:
+        Dict com interpretação
+    """
+    np = get_numpy()
+    
+    if np.isinf(vif_value):
+        return {
+            'status': 'Perfeita Colinearidade',
+            'color': 'red',
+            'message': 'VIF = ∞ - Colinearidade perfeita, remova esta variável'
+        }
+    elif vif_value > 10:
+        return {
+            'status': 'Alta Colinearidade',
+            'color': 'red',
+            'message': f'VIF = {vif_value:.2f} - Alta multicolinearidade, considere remover'
+        }
+    elif vif_value > 5:
+        return {
+            'status': 'Colinearidade Moderada',
+            'color': 'yellow',
+            'message': f'VIF = {vif_value:.2f} - Multicolinearidade moderada'
+        }
+    else:
+        return {
+            'status': 'Sem Colinearidade',
+            'color': 'green',
+            'message': f'VIF = {vif_value:.2f} - Sem problemas de multicolinearidade'
+        }
