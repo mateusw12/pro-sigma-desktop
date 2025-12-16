@@ -474,6 +474,12 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'pro',
                 'in_development': False  # Implementado
             },
+            'logistic_regression': {
+                'title': 'Regressão Logística',
+                'description': 'Classificação binária com GLM e análise de probabilidades',
+                'plan': 'pro',
+                'in_development': False  # Implementado
+            },
         }
         
         # Obtém features disponíveis
@@ -547,7 +553,7 @@ class HomePage(ctk.CTkFrame):
             'ccd': '🎯', 'neural_networks': '🧠', 'decision_tree': '🌳', 
             'descriptive_stats': '📊', 'ishikawa': '🐟', 'tree_models': '🌳',
             'gage_rr': '📏', 'run_chart': '📈', 'pareto': '📊', 'k_means': '🔵',
-            'gaussian_process': '📉'
+            'gaussian_process': '📉', 'logistic_regression': '🎯'
         }
         
         for idx, (feature_id, tool_info) in enumerate(tools_list):
@@ -932,6 +938,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'gaussian_process':
                 from src.analytics.gaussian_process.gaussian_process_window import GaussianProcessWindow
                 GaussianProcessWindow(self, selected_data)
+            elif feature_id == 'logistic_regression':
+                from src.analytics.logistic_regression.logistic_regression_window import LogisticRegressionWindow
+                LogisticRegressionWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
