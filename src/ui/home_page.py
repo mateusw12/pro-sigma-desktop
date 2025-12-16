@@ -432,6 +432,12 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'pro',
                 'in_development': False  # Implementado
             },
+            'gage_rr': {
+                'title': 'Gage R&R',
+                'description': 'Measurement System Analysis - Repetibilidade e Reprodutibilidade',
+                'plan': 'basic',
+                'in_development': False  # Implementado
+            },
             'nonlinear': {
                 'title': 'Regressão Não Linear',
                 'description': 'Análise de regressão não linear',
@@ -515,7 +521,8 @@ class HomePage(ctk.CTkFrame):
             'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '�',
             'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'nonlinear': '📉',
             'ccd': '🎯', 'neural_networks': '🧠', 'decision_tree': '🌳', 
-            'descriptive_stats': '📊', 'ishikawa': '🐟'
+            'descriptive_stats': '📊', 'ishikawa': '🐟', 'tree_models': '🌳',
+            'gage_rr': '📏'
         }
         
         for idx, (feature_id, tool_info) in enumerate(tools_list):
@@ -885,6 +892,9 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'tree_models':
                 from src.analytics.tree_models.tree_models_window import TreeModelsWindow
                 TreeModelsWindow(self, selected_data)
+            elif feature_id == 'gage_rr':
+                from src.analytics.msa.gage_rr_window import GageRRWindow
+                GageRRWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(
