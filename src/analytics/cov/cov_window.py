@@ -684,7 +684,7 @@ class CovEmsWindow(ctk.CTkToplevel):
             ctk.CTkLabel(var_table_frame, text=total_text, width=120).grid(row=idx, column=3, padx=5, pady=3)
     
     def display_variance_chart(self, parent, result_data: Dict, response_name: str):
-        """Display variance components bar chart"""
+        """Display variance components bar chart and pie chart"""
         chart_frame = ctk.CTkFrame(parent)
         chart_frame.pack(fill="both", expand=True)
         
@@ -710,34 +710,71 @@ class CovEmsWindow(ctk.CTkToplevel):
         sorted_data = sorted(zip(labels, values), key=lambda x: x[1])
         labels, values = zip(*sorted_data) if sorted_data else ([], [])
         
-        # Add Total at the end
-        if total_row:
-            labels = list(labels) + ["Total"]
-            values = list(values) + [total_row["total"] if isinstance(total_row["total"], (int, float)) else 0]
+        labels = list(labels)
+        values = list(values)
         
-        # Create chart
-        fig = self.Figure(figsize=(6, 5), dpi=100)
-        ax = fig.add_subplot(111)
+        # Create figure with 2 subplots (bar and pie)
+        fig = self.Figure(figsize=(12, 5), dpi=100)
+        
+        # 1. Bar Chart
+        ax1 = fig.add_subplot(121)
         
         colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE']
         bar_colors = [colors[i % len(colors)] for i in range(len(values))]
         
-        # Highlight Total with different color
-        if labels and labels[-1] == "Total":
-            bar_colors[-1] = '#2ECC71'  # Green for Total
+        bars = ax1.barh(labels, values, color=bar_colors, edgecolor='black', alpha=0.7)
         
-        bars = ax.barh(labels, values, color=bar_colors, edgecolor='black', alpha=0.7)
-        
-        # Add value labels
+        # Add value labels on bars
         for bar in bars:
             width = bar.get_width()
-            ax.text(width, bar.get_y() + bar.get_height() / 2.,
+            ax1.text(width, bar.get_y() + bar.get_height() / 2.,
                     f'{width:.1f}%',
                     ha='left', va='center', fontsize=9, fontweight='bold')
         
-        ax.set_xlabel('Contribuição (%)', fontsize=10, fontweight='bold')
-        ax.set_title('Componentes de Variância', fontsize=12, fontweight='bold')
-        ax.grid(True, alpha=0.3, axis='x')
+        ax1.set_xlabel('Contribuição (%)', fontsize=10, fontweight='bold')
+        ax1.set_title('Componentes de Variância (Barras)', fontsize=11, fontweight='bold')
+        ax1.grid(True, alpha=0.3, axis='x')
+        
+        # 2. Pie Chart
+        ax2 = fig.add_subplot(122)
+        
+        # Filtrar apenas valores positivos para o gráfico de pizza
+        pie_labels = []
+        pie_values = []
+        for i, val in enumerate(values):
+            if val > 0:
+                pie_labels.append(labels[i])
+                pie_values.append(val)
+        
+        if pie_values:
+            pie_colors = [colors[i % len(colors)] for i in range(len(pie_values))]
+            
+            wedges, texts, autotexts = ax2.pie(
+                pie_values,
+                labels=pie_labels,
+                colors=pie_colors,
+                autopct='%1.1f%%',
+                startangle=90,
+                explode=[0.05] * len(pie_values),  # Slight separation
+                shadow=True
+            )
+            
+            # Melhorar legibilidade
+            for text in texts:
+                text.set_fontsize(9)
+                text.set_fontweight('bold')
+            
+            for autotext in autotexts:
+                autotext.set_color('white')
+                autotext.set_fontsize(8)
+                autotext.set_fontweight('bold')
+            
+            ax2.set_title('Distribuição de Variância (%)', fontsize=11, fontweight='bold')
+        else:
+            ax2.text(0.5, 0.5, 'Sem dados positivos\npara exibir', 
+                    ha='center', va='center', transform=ax2.transAxes,
+                    fontsize=12, color='gray')
+            ax2.set_title('Distribuição de Variância', fontsize=11, fontweight='bold')
         
         fig.tight_layout()
         

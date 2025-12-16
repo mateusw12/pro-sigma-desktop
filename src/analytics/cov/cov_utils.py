@@ -255,3 +255,29 @@ def calculate_percent_total(sum_sq, total_sum_sq: float) -> List[float]:
 def get_replace_label_crossed(label: str) -> str:
     """Formata labels para análise crossed"""
     return label.replace("C(", "").replace(")", "").replace(":", " * ")
+
+
+def prepare_variance_chart_data(variation_table: Dict, exclude_total=True) -> tuple:
+    """
+    Prepara dados para visualização de componentes de variância
+    
+    Args:
+        variation_table: Tabela de variação do calculate_variation_table
+        exclude_total: Se deve excluir 'total' do resultado
+    
+    Returns:
+        tuple: (labels, variances, percentages)
+    """
+    labels = []
+    variances = []
+    percentages = []
+    
+    for key, value in variation_table.items():
+        if key == 'total' and exclude_total:
+            continue
+        if isinstance(value, dict):
+            labels.append(key)
+            variances.append(value['variance'])
+            percentages.append(value['percentage'])
+    
+    return labels, variances, percentages
