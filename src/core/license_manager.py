@@ -29,7 +29,7 @@ class LicenseManager:
                 'distribution_test', 'cov_ems',
                 'text_analysis',  'control_charts', 
                 'dashboard', 'monte_carlo', 'cov_ems', 'descriptive_stats',
-                'ishikawa', 'gage_rr', 'run_chart', 'pareto'
+                'ishikawa', 'gage_rr', 'run_chart', 'pareto', 'doe',
             ]
         },
         'pro': {

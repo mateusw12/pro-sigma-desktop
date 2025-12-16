@@ -384,6 +384,12 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'intermediate',
                 'in_development': False
             },
+            'doe': {
+                'title': 'DOE',
+                'description': 'Design of Experiments',
+                'plan': 'intermediate',
+                'in_development': True  # Em desenvolvimento
+            },
             'simple_regression': {
                 'title': 'Regressão Simples',
                 'description': 'Regressão linear simples (1 X e 1 Y)',
@@ -407,12 +413,6 @@ class HomePage(ctk.CTkFrame):
                 'description': 'Análise de tolerâncias 2D',
                 'plan': 'intermediate',
                 'in_development': False  # Implementado
-            },
-            'doe': {
-                'title': 'DOE',
-                'description': 'Design of Experiments',
-                'plan': 'pro',
-                'in_development': True  # Em desenvolvimento
             },
             'space_filling': {
                 'title': 'Space Filling Design',
