@@ -233,8 +233,6 @@ class MixtureDesignWindow(ctk.CTkToplevel):
         """Valida entradas"""
         # Variáveis Y
         y_cols = [col for col, var in self.y_vars if var.get() == "on"]
-        print(f"DEBUG: Y columns selected: {y_cols}")
-        print(f"DEBUG: Y vars check: {[(col, var.get()) for col, var in self.y_vars]}")
         
         if len(y_cols) < 1:
             messagebox.showerror("Erro", "Selecione pelo menos uma variável resposta Y!")
@@ -242,7 +240,6 @@ class MixtureDesignWindow(ctk.CTkToplevel):
         
         # Componentes X
         x_cols = [col for col, var in self.x_vars if var.get() == "on"]
-        print(f"DEBUG: X columns selected: {x_cols}")
         
         if len(x_cols) < 3:
             messagebox.showerror("Erro", "Selecione pelo menos 3 componentes da mistura!")
@@ -269,8 +266,6 @@ class MixtureDesignWindow(ctk.CTkToplevel):
             y_cols = [col for col, var in self.y_vars if var.get() == "on"]
             x_cols = [col for col, var in self.x_vars if var.get() == "on"]
             
-            print(f"DEBUG: Starting calculation with Y={y_cols}, X={x_cols}")
-            
             # Get interaction settings
             include_all_interactions = self.include_interactions_var.get() == "on"
             custom_interactions_text = self.custom_interactions_entry.get().strip()
@@ -278,9 +273,6 @@ class MixtureDesignWindow(ctk.CTkToplevel):
             custom_terms = None
             if custom_interactions_text:
                 custom_terms = [t.strip() for t in custom_interactions_text.split(',')]
-            
-            print(f"DEBUG: Include all interactions: {include_all_interactions}")
-            print(f"DEBUG: Custom terms: {custom_terms}")
             
             # Calculate for each Y
             self.results = {}
@@ -320,8 +312,6 @@ class MixtureDesignWindow(ctk.CTkToplevel):
                     traceback.print_exc()
             
             # Check if any models succeeded
-            print(f"DEBUG: Results calculated: {len(self.results)} models")
-            print(f"DEBUG: Results keys: {list(self.results.keys())}")
             
             if len(self.results) == 0:
                 error_msg = f"Nenhum modelo foi calculado!\n\nVariáveis Y selecionadas: {len(y_cols)}\n"
@@ -331,9 +321,7 @@ class MixtureDesignWindow(ctk.CTkToplevel):
                 return
             
             # Display results
-            print("DEBUG: Calling display_results()")
             self.display_results()
-            print("DEBUG: display_results() completed")
             
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao calcular modelo:\n{str(e)}")
@@ -560,7 +548,6 @@ class MixtureDesignWindow(ctk.CTkToplevel):
                 
                 if constraints_list:
                     constraints_df = self.pd.DataFrame(constraints_list)
-                    print(f"DEBUG: Constraints applied:\n{constraints_df}")
                 
                 # Generate design
                 design_df = generate_mixture_design(
@@ -623,21 +610,16 @@ class MixtureDesignWindow(ctk.CTkToplevel):
     
     def clear_results(self):
         """Limpa resultados"""
-        print(f"DEBUG: clear_results() called - clearing {len(self.results_container.winfo_children())} widgets")
         for widget in self.results_container.winfo_children():
             widget.destroy()
         # Não limpar self.results aqui! Apenas os widgets visuais
     
     def display_results(self):
         """Exibe resultados"""
-        print(f"DEBUG: display_results() called with {len(self.results)} results")
         self.clear_results()
         
         if not self.results:
-            print("DEBUG: No results to display (self.results is empty)")
             return
-        
-        print(f"DEBUG: Displaying results for: {list(self.results.keys())}")
         
         # Title
         title = ctk.CTkLabel(
@@ -649,7 +631,6 @@ class MixtureDesignWindow(ctk.CTkToplevel):
         
         # Display for each Y
         for y_col, result in self.results.items():
-            print(f"DEBUG: Displaying results for Y={y_col}")
             self.display_y_results(y_col, result)
     
     def display_y_results(self, y_col: str, result: Dict):

@@ -295,16 +295,9 @@ class LogisticRegressionWindow(ctk.CTkToplevel):
             x_cols = [col for col, var in self.x_vars if var.get() == "on"]
             cat_cols = [col for col, var in self.cat_vars if var.get() == "on" and col in x_cols]
             
-            print(f"DEBUG - Y column: {y_col}")
-            print(f"DEBUG - X columns: {x_cols}")
-            print(f"DEBUG - Categorical columns: {cat_cols}")
-            
             # Prepare data
             work_df = self.df[[y_col] + x_cols].copy()
             work_df = work_df.dropna()
-            
-            print(f"DEBUG - Working dataframe shape: {work_df.shape}")
-            print(f"DEBUG - Y unique values: {work_df[y_col].unique()}")
             
             # Verificar se há dados suficientes
             if len(work_df) < 10:
@@ -312,16 +305,13 @@ class LogisticRegressionWindow(ctk.CTkToplevel):
                 return
             
             # Calcular regressão
-            print("DEBUG - Calling calculate_logistic_regression...")
             self.results = calculate_logistic_regression(
                 work_df, 
                 y_col, 
                 x_cols,
                 cat_cols
             )
-            print("DEBUG - Regression calculated successfully!")
-            print(f"DEBUG - self.results type: {type(self.results)}")
-            print(f"DEBUG - self.results is None: {self.results is None}")
+            
             if self.results:
                 print(f"DEBUG - self.results keys: {self.results.keys()}")
             
@@ -331,12 +321,9 @@ class LogisticRegressionWindow(ctk.CTkToplevel):
                 self.results['parameterEstimates']
             )
             self.results['interpretations'] = interpretations
-            print(f"DEBUG - Interpretations added")
             
             # Display results
-            print(f"DEBUG - Before display_results, self.results is None: {self.results is None}")
             self.display_results()
-            print(f"DEBUG - After display_results")
             
             messagebox.showinfo("Sucesso", "Regressão logística calculada com sucesso!")
             
@@ -358,16 +345,13 @@ class LogisticRegressionWindow(ctk.CTkToplevel):
     
     def display_results(self):
         """Exibe resultados da regressão"""
-        print("DEBUG - display_results() called")
         
         if not self.results:
-            print("DEBUG - No results to display!")
             return
         
         # Limpar widgets anteriores (mas manter self.results)
         self.clear_results()
         
-        print(f"DEBUG - Results keys: {self.results.keys()}")
         
         # Title
         title = ctk.CTkLabel(
@@ -376,7 +360,6 @@ class LogisticRegressionWindow(ctk.CTkToplevel):
             font=ctk.CTkFont(size=20, weight="bold")
         )
         title.pack(pady=(10, 20))
-        print("DEBUG - Title created")
         
         # Display sections in sequence (like other tools)
         self.display_response_mapping()
@@ -386,8 +369,6 @@ class LogisticRegressionWindow(ctk.CTkToplevel):
         self.display_confusion_matrix()
         self.display_sigmoid()
         self.display_equations()
-        
-        print("DEBUG - All displays complete!")
         
         # Update scroll region
         self.main_container.update_idletasks()
@@ -409,9 +390,7 @@ class LogisticRegressionWindow(ctk.CTkToplevel):
     def display_summary(self):
         """Exibe resumo do modelo"""
         try:
-            print("DEBUG - display_summary started")
             metrics = self.results['metrics']
-            print(f"DEBUG - Metrics: {metrics}")
         
             # Informação sobre mapeamento da resposta
             reverse_mapping = self.results.get('reverseMappingResponse', {0: '0', 1: '1'})
@@ -492,7 +471,6 @@ class LogisticRegressionWindow(ctk.CTkToplevel):
                     justify="left"
                 ).pack(anchor="w", padx=20, pady=3)
             
-                print("DEBUG - display_summary completed")
         except Exception as e:
             print(f"ERROR in display_summary: {e}")
             import traceback
