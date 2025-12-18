@@ -43,7 +43,7 @@ class LicenseManager:
                 'stackup', 'doe', 'space_filling', 'nonlinear', 'ccd',
                 'neural_networks', 'tree_models', 'gage_rr', 'descriptive_stats',
                 'ishikawa', 'run_chart', 'pareto', 'k_means', 'gaussian_process', 
-                'logistic_regression'
+                'logistic_regression', 'mixture_design'
             ]
         }
     }
