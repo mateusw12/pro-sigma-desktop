@@ -3,6 +3,7 @@ Space Filling Design - Funções de cálculo
 Reaproveitamento do backend Python existente
 """
 
+import statsmodels.api as sm
 from src.utils.lazy_imports import get_numpy, get_scipy_stats, get_scipy_spatial_distance, get_pyDOE2
 
 
@@ -140,22 +141,44 @@ def calculate_space_filling_analysis(data, response_columns, interaction_columns
         X_cols = [col for col in df.columns if col not in response_columns]
         X = df[X_cols].values
         
-        # Adiciona intercepto
+        # Calcula médias para centralização
+        means = {col: float(df[col].mean()) for col in X_cols}
+        
+        # Constrói matriz X com intercepto e termos lineares
         X_with_intercept = np.column_stack([np.ones(len(X)), X])
         
+        # Lista para armazenar nomes dos parâmetros
+        param_names = ['Intercept'] + X_cols.copy()
+        
         # Adiciona interações/quadráticos se especificados
+        quadratic_terms = {}  # {nome: (idx_coluna, centralizado)}
         interaction_names = []
+        
         if interaction_columns:
             for interaction in interaction_columns:
-                terms = interaction.split('*')
-                if len(terms) == 2:
-                    col1, col2 = terms
-                    if col1 in X_cols and col2 in X_cols:
-                        idx1 = X_cols.index(col1)
-                        idx2 = X_cols.index(col2)
-                        interaction_term = X[:, idx1] * X[:, idx2]
-                        X_with_intercept = np.column_stack([X_with_intercept, interaction_term])
+                # Termos quadráticos são identificados por "/" (ex: "A/A")
+                if '/' in interaction:
+                    var_name = interaction.split('/')[0]
+                    if var_name in X_cols:
+                        idx = X_cols.index(var_name)
+                        # Termo quadrático CENTRALIZADO: (X - mean)^2
+                        centered_term = (X[:, idx] - means[var_name]) ** 2
+                        X_with_intercept = np.column_stack([X_with_intercept, centered_term])
+                        quadratic_terms[interaction] = idx
+                        param_names.append(interaction)
                         interaction_names.append(interaction)
+                # Termos de interação (X1*X2)
+                elif '*' in interaction:
+                    terms = interaction.split('*')
+                    if len(terms) == 2:
+                        col1, col2 = terms
+                        if col1 in X_cols and col2 in X_cols:
+                            idx1 = X_cols.index(col1)
+                            idx2 = X_cols.index(col2)
+                            interaction_term = X[:, idx1] * X[:, idx2]
+                            X_with_intercept = np.column_stack([X_with_intercept, interaction_term])
+                            param_names.append(interaction)
+                            interaction_names.append(interaction)
         
         # Calcula betas (regressão linear)
         try:
@@ -163,6 +186,32 @@ def calculate_space_filling_analysis(data, response_columns, interaction_columns
         except:
             results[response_col] = {"error": "Erro ao calcular betas"}
             continue
+        
+        # Criar modelo statsmodels para profiler incluindo TODOS os termos
+        # Precisamos criar DataFrame com termos lineares + quadráticos + interações
+        X_df_full = pd.DataFrame(X, columns=X_cols)
+        
+        # Adicionar termos quadráticos e interações ao DataFrame para statsmodels
+        if interaction_columns:
+            for interaction in interaction_columns:
+                if '/' in interaction:
+                    # Termo quadrático centralizado
+                    var_name = interaction.split('/')[0]
+                    if var_name in X_cols:
+                        X_df_full[interaction] = (X_df_full[var_name] - means[var_name]) ** 2
+                elif '*' in interaction:
+                    # Termo de interação
+                    terms = interaction.split('*')
+                    if len(terms) == 2:
+                        col1, col2 = terms
+                        if col1 in X_cols and col2 in X_cols:
+                            X_df_full[interaction] = X_df_full[col1] * X_df_full[col2]
+        
+        X_with_const = sm.add_constant(X_df_full)
+        ols_model = sm.OLS(y, X_with_const).fit()
+        
+        # Armazenar informações sobre termos quadráticos para o profiler
+        quadratic_info = {name: means[name.split('/')[0]] for name in quadratic_terms.keys()}
         
         # Predições
         y_pred = X_with_intercept @ betas
@@ -205,11 +254,7 @@ def calculate_space_filling_analysis(data, response_columns, interaction_columns
             t_stats = np.zeros(len(betas))
             p_values = np.ones(len(betas))
         
-        # Nomeia parâmetros
-        param_names = ['Intercept'] + X_cols
-        if interaction_names:
-            param_names += interaction_names
-        
+        # Nomeia parâmetros (já definidos anteriormente em param_names)
         parameter_estimates = {}
         for i, name in enumerate(param_names[:len(betas)]):
             parameter_estimates[name] = {
@@ -228,15 +273,18 @@ def calculate_space_filling_analysis(data, response_columns, interaction_columns
             'probF': 1
         }
         
-        # Calcula médias
-        means = {col: float(df[col].mean()) for col in X_cols}
-        
         # Ordena Y e Y_pred para gráfico overlay
         sorted_indices = np.argsort(y)
         y_sorted = y[sorted_indices].tolist()
         y_pred_sorted = y_pred[sorted_indices].tolist()
         
         results[response_col] = {
+            'model': ols_model,  # Statsmodels model for profiler (com todos os termos)
+            'X_cols': X_cols,  # Column names for profiler (apenas fatores principais)
+            'quadratic_terms': list(quadratic_terms.keys()) if quadratic_terms else [],  # Termos quadráticos
+            'interaction_terms': interaction_names,  # Termos de interação
+            'means': means,  # Médias para centralização dos quadráticos
+            'param_names': param_names,  # Nomes dos parâmetros na ordem correta
             'betas': betas.tolist(),
             'anovaTable': {
                 'grausLiberdade': {
@@ -296,19 +344,20 @@ def validate_space_filling_data(data, response_columns):
 
 
 def generate_equation(betas, param_names, means):
-    """Gera equação do modelo"""
+    """Gera equação do modelo no formato JMP (termos lineares não centralizados, quadráticos centralizados)"""
     equation = "Y = "
     
     for i, (beta, name) in enumerate(zip(betas, param_names)):
         if i == 0:
+            # Intercepto
             equation += f"{beta:.4f}"
+        elif '/' in name:
+            # Termo quadrático: (X - média)²
+            var_name = name.split('/')[0]
+            equation += f" + ({var_name} - ({means[var_name]:.7f})) * (({var_name} - ({means[var_name]:.7f})) * ({beta:.7f}))"
         else:
+            # Termo linear (não centralizado) ou interação
             sign = "+" if beta >= 0 else "-"
-            if name in means:
-                # Codificado
-                equation += f" {sign} {abs(beta):.4f}*({name} - {means[name]:.2f})"
-            else:
-                # Interação ou termo quadrático
-                equation += f" {sign} {abs(beta):.4f}*{name}"
+            equation += f" {sign} {abs(beta):.7f} * {name}"
     
     return equation

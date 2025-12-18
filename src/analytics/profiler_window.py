@@ -69,9 +69,14 @@ class ProfilerWindow(ctk.CTkToplevel):
         self.y_col = model_data['y_col']
         self.model_type = model_data.get('model_type', 'linear')
         
+        # Space filling specific data (quadratic terms)
+        self.quadratic_terms = model_data.get('quadratic_terms', [])
+        self.interaction_terms_list = model_data.get('interaction_terms', [])
+        self.factor_means = model_data.get('means', {})
+        
         # Separate main factors from interactions
         # Interactions typically have "×" or "*" in their names
-        self.main_factors = [col for col in self.x_cols if '×' not in col and '*' not in col]
+        self.main_factors = [col for col in self.x_cols if '×' not in col and '*' not in col and '/' not in col]
         self.interactions = [col for col in self.x_cols if '×' in col or '*' in col]
         
         # Current values for each factor (initialize to mean)
@@ -139,13 +144,13 @@ class ProfilerWindow(ctk.CTkToplevel):
                 # Update interaction terms if any
                 self._update_interactions(pred_input)
                 
-                pred_df = self.pd.DataFrame([pred_input])[self.x_cols]
-                pred_df_const = sm.add_constant(pred_df, has_constant='add')
+                pred_df = self.pd.DataFrame([pred_input])[self.main_factors]
+                pred_df_with_terms = self._add_derived_terms(pred_df)
                 
                 if self.model_type == 'logistic':
-                    y_pred = self.model.predict(pred_df_const)[0]
+                    y_pred = self.model.predict(pred_df_with_terms)[0]
                 else:
-                    y_pred = self.model.predict(pred_df_const)[0]
+                    y_pred = self.model.predict(pred_df_with_terms)[0]
                 
                 all_predictions.append(y_pred)
         
@@ -172,6 +177,61 @@ class ProfilerWindow(ctk.CTkToplevel):
                 factor1, factor2 = factors[0].strip(), factors[1].strip()
                 if factor1 in values_dict and factor2 in values_dict:
                     values_dict[interaction] = values_dict[factor1] * values_dict[factor2]
+    
+    def _add_derived_terms(self, pred_df):
+        """Adiciona termos quadráticos e interações ao DataFrame de predição"""
+        print(f"DEBUG: Input pred_df columns: {list(pred_df.columns)}")
+        print(f"DEBUG: Quadratic terms: {self.quadratic_terms}")
+        print(f"DEBUG: Interaction terms: {self.interaction_terms_list}")
+        
+        # Adicionar termos quadráticos (centralizados)
+        for quad_term in self.quadratic_terms:
+            if '/' in quad_term:
+                var_name = quad_term.split('/')[0]
+                if var_name in pred_df.columns:
+                    mean_val = self.factor_means.get(var_name, pred_df[var_name].mean())
+                    pred_df[quad_term] = (pred_df[var_name] - mean_val) ** 2
+                    print(f"DEBUG: Added quadratic term {quad_term} with mean {mean_val}")
+        
+        # Adicionar termos de interação
+        for interaction in self.interaction_terms_list:
+            if '*' in interaction and '/' not in interaction:
+                terms = interaction.split('*')
+                if len(terms) == 2:
+                    col1, col2 = terms[0].strip(), terms[1].strip()
+                    if col1 in pred_df.columns and col2 in pred_df.columns:
+                        pred_df[interaction] = pred_df[col1] * pred_df[col2]
+                        print(f"DEBUG: Added interaction term {interaction}")
+        
+        print(f"DEBUG: pred_df after adding terms: {list(pred_df.columns)}")
+        
+        # Reordenar colunas para corresponder ao modelo
+        # Obter colunas esperadas pelo modelo (excluindo 'const')
+        try:
+            model_cols = [col for col in self.model.model.exog_names if col != 'const']
+            print(f"DEBUG: Model expects columns: {model_cols}")
+            
+            # Garantir que todas as colunas do modelo estejam presentes
+            for col in model_cols:
+                if col not in pred_df.columns:
+                    print(f"DEBUG: Column {col} missing, adding with value 0")
+                    pred_df[col] = 0  # Preencher com 0 se ausente
+            
+            # Reordenar para corresponder ao modelo
+            pred_df = pred_df[model_cols]
+            print(f"DEBUG: pred_df after reordering: {list(pred_df.columns)}, shape: {pred_df.shape}")
+            
+            # Adicionar constante se o modelo tiver
+            if 'const' in self.model.model.exog_names:
+                pred_df = sm.add_constant(pred_df, has_constant='add')
+                print(f"DEBUG: Added constant, final shape: {pred_df.shape}")
+        except Exception as e:
+            print(f"Error in _add_derived_terms: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        print(f"DEBUG: Final pred_df columns: {list(pred_df.columns)}, shape: {pred_df.shape}")
+        return pred_df
     
     def create_widgets(self):
         """Cria interface"""
@@ -389,13 +449,16 @@ class ProfilerWindow(ctk.CTkToplevel):
             pred_input[col_name] = x_val
             self._update_interactions(pred_input)
             
-            pred_df = self.pd.DataFrame([pred_input])[self.x_cols]
-            pred_df_const = sm.add_constant(pred_df, has_constant='add')
+            # Create DataFrame only with main factors
+            pred_df = self.pd.DataFrame([pred_input])[self.main_factors]
+            
+            # Add derived terms (quadratics and interactions) and prepare
+            pred_df = self._add_derived_terms(pred_df)
             
             if self.model_type == 'logistic':
-                y_pred = self.model.predict(pred_df_const)[0]
+                y_pred = self.model.predict(pred_df)[0]
             else:
-                y_pred = self.model.predict(pred_df_const)[0]
+                y_pred = self.model.predict(pred_df)[0]
             
             predictions.append(y_pred)
         
@@ -451,18 +514,18 @@ class ProfilerWindow(ctk.CTkToplevel):
     def update_prediction(self):
         """Atualiza predição com valores atuais"""
         try:
-            # Create prediction DataFrame
-            pred_df = self.pd.DataFrame([self.current_values])[self.x_cols]
+            # Create prediction DataFrame with main factors only
+            pred_df = self.pd.DataFrame([self.current_values])[self.main_factors]
             
-            # Add constant for statsmodels (if needed)
-            pred_df_const = sm.add_constant(pred_df, has_constant='add')
+            # Add derived terms (quadratics and interactions) and prepare for model
+            pred_df = self._add_derived_terms(pred_df)
             
             # Predict
             if self.model_type == 'logistic':
-                y_pred = self.model.predict(pred_df_const)[0]
+                y_pred = self.model.predict(pred_df)[0]
                 pred_text = f"{y_pred:.4f}"
             else:
-                y_pred = self.model.predict(pred_df_const)[0]
+                y_pred = self.model.predict(pred_df)[0]
                 pred_text = f"{y_pred:.4f}"
             
             self.pred_label.configure(text=pred_text)
@@ -499,13 +562,16 @@ class ProfilerWindow(ctk.CTkToplevel):
                 pred_input[col_name] = x_val
                 self._update_interactions(pred_input)
                 
-                pred_df = self.pd.DataFrame([pred_input])[self.x_cols]
-                pred_df_const = sm.add_constant(pred_df, has_constant='add')
+                # Create DataFrame with main factors only
+                pred_df = self.pd.DataFrame([pred_input])[self.main_factors]
+                
+                # Add derived terms and prepare
+                pred_df = self._add_derived_terms(pred_df)
                 
                 if self.model_type == 'logistic':
-                    y_pred = self.model.predict(pred_df_const)[0]
+                    y_pred = self.model.predict(pred_df)[0]
                 else:
-                    y_pred = self.model.predict(pred_df_const)[0]
+                    y_pred = self.model.predict(pred_df)[0]
                 
                 predictions.append(y_pred)
             

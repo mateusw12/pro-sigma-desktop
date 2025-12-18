@@ -23,6 +23,7 @@ from src.analytics.space_filling.space_filling_utils import (
     generate_equation
 )
 from src.analytics.space_filling.generate_experiment_window import GenerateExperimentWindow
+from src.analytics.profiler_window import ProfilerWindow
 
 
 class SpaceFillingWindow(ctk.CTkToplevel):
@@ -51,6 +52,7 @@ class SpaceFillingWindow(ctk.CTkToplevel):
         self.selected_x_cols = []
         self.selected_y_cols = []
         self.interaction_terms = []
+        self.model_data = None  # For profiler
         
         self._build_ui()
         
@@ -85,6 +87,18 @@ class SpaceFillingWindow(ctk.CTkToplevel):
             fg_color="#9B59B6",
             hover_color="#7D3C98"
         ).pack(side="right", padx=5)
+        
+        # Botão Profiler
+        self.profiler_btn = ctk.CTkButton(
+            title_frame,
+            text="📈 Abrir Profiler Interativo",
+            command=self._open_profiler,
+            height=32,
+            fg_color="#9B59B6",
+            hover_color="#7D3C98",
+            state="disabled"
+        )
+        self.profiler_btn.pack(side="right", padx=5)
         
         # Seleção de colunas
         selection_frame = ctk.CTkFrame(config_frame, fg_color="transparent")
@@ -328,6 +342,33 @@ class SpaceFillingWindow(ctk.CTkToplevel):
             # Exibe resultados
             self._display_results()
             
+            # Store model data for profiler (last Y analyzed)
+            if self.selected_y_cols:
+                last_y = self.selected_y_cols[-1]
+                if last_y in self.results and 'model' in self.results[last_y]:
+                    result = self.results[last_y]
+                    pd = __import__('pandas')
+                    
+                    # Get X data
+                    X_df = self.data[result['X_cols']]
+                    y_data = self.data[last_y]
+                    
+                    self.model_data = {
+                        'model': result['model'],
+                        'X': X_df,
+                        'y': pd.Series(y_data.values, name=last_y),
+                        'x_cols': result['X_cols'],
+                        'y_col': last_y,
+                        'model_type': 'space_filling',
+                        'rmse': result.get('rmse', 0),
+                        'quadratic_terms': result.get('quadratic_terms', []),
+                        'interaction_terms': result.get('interaction_terms', []),
+                        'means': result.get('means', {})
+                    }
+                    
+                    # Enable profiler button
+                    self.profiler_btn.configure(state="normal")
+            
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao calcular análise: {str(e)}")
     
@@ -377,9 +418,13 @@ class SpaceFillingWindow(ctk.CTkToplevel):
             font=ctk.CTkFont(size=13, weight="bold")
         ).pack(anchor="w", padx=15, pady=(12, 6))
         
-        param_names = ['Intercept'] + self.selected_x_cols
-        if self.interaction_terms:
-            param_names += self.interaction_terms
+        # Usar param_names do resultado se disponível, senão construir
+        if 'param_names' in result:
+            param_names = result['param_names']
+        else:
+            param_names = ['Intercept'] + self.selected_x_cols
+            if self.interaction_terms:
+                param_names += self.interaction_terms
         
         equation = generate_equation(result['betas'], param_names, result['mean'])
         
@@ -771,3 +816,26 @@ class SpaceFillingWindow(ctk.CTkToplevel):
     def _open_generate_experiment(self):
         """Abre janela para gerar experimento"""
         GenerateExperimentWindow(self)
+    
+    def _open_profiler(self):
+        """Abre profiler interativo"""
+        if self.model_data is None:
+            messagebox.showwarning(
+                "Aviso",
+                "Execute primeiro a análise antes de abrir o profiler."
+            )
+            return
+        
+        try:
+            ProfilerWindow(
+                self,
+                self.model_data,
+                title=f"Profiler - Space Filling ({self.model_data['y_col']})"
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Erro ao abrir profiler:\n{str(e)}"
+            )
+            import traceback
+            traceback.print_exc()
