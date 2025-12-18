@@ -348,12 +348,12 @@ class MixtureDesignWindow(ctk.CTkToplevel):
         # Create popup window
         exp_window = ctk.CTkToplevel(self)
         exp_window.title("Gerar Experimento de Mistura")
-        exp_window.geometry("600x500")
+        exp_window.geometry("700x700")
         exp_window.transient(self)
         exp_window.grab_set()
         
-        # Main frame
-        main_frame = ctk.CTkFrame(exp_window)
+        # Main scrollable frame
+        main_frame = ctk.CTkScrollableFrame(exp_window)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
         # Title
@@ -376,6 +376,92 @@ class MixtureDesignWindow(ctk.CTkToplevel):
         n_factors_var = ctk.StringVar(value="3")
         n_factors_entry = ctk.CTkEntry(factors_frame, textvariable=n_factors_var, width=100)
         n_factors_entry.pack(side="left", padx=10)
+        
+        # Button to update constraints
+        update_btn = ctk.CTkButton(
+            factors_frame,
+            text="↻ Atualizar Restrições",
+            command=lambda: update_constraints_ui(),
+            width=150,
+            height=30,
+            font=ctk.CTkFont(size=12)
+        )
+        update_btn.pack(side="left", padx=10)
+        
+        # Constraints section
+        constraints_section = ctk.CTkFrame(main_frame)
+        constraints_section.pack(fill="x", pady=10)
+        
+        ctk.CTkLabel(
+            constraints_section,
+            text="⚙️ Restrições dos Componentes (Opcional)",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(pady=(10, 5))
+        
+        ctk.CTkLabel(
+            constraints_section,
+            text="Defina limites mín/máx para cada componente (deixe vazio para sem restrição)",
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        ).pack(pady=(0, 10))
+        
+        # Container for constraint entries
+        constraints_container = ctk.CTkFrame(constraints_section)
+        constraints_container.pack(fill="x", padx=10, pady=5)
+        
+        constraint_entries = []
+        
+        def update_constraints_ui():
+            """Atualiza UI de restrições baseado no número de fatores"""
+            # Clear existing
+            for widget in constraints_container.winfo_children():
+                widget.destroy()
+            constraint_entries.clear()
+            
+            try:
+                n_factors = int(n_factors_var.get())
+                if n_factors < 3:
+                    n_factors = 3
+                
+                # Header
+                header_frame = ctk.CTkFrame(constraints_container, fg_color="transparent")
+                header_frame.pack(fill="x", pady=5)
+                
+                ctk.CTkLabel(header_frame, text="Componente", width=100, font=ctk.CTkFont(size=11, weight="bold")).pack(side="left", padx=5)
+                ctk.CTkLabel(header_frame, text="Mínimo", width=80, font=ctk.CTkFont(size=11, weight="bold")).pack(side="left", padx=5)
+                ctk.CTkLabel(header_frame, text="Máximo", width=80, font=ctk.CTkFont(size=11, weight="bold")).pack(side="left", padx=5)
+                
+                # Create entry for each factor
+                for i in range(n_factors):
+                    entry_frame = ctk.CTkFrame(constraints_container, fg_color="transparent")
+                    entry_frame.pack(fill="x", pady=3)
+                    
+                    ctk.CTkLabel(
+                        entry_frame,
+                        text=f"X{i+1}",
+                        width=100,
+                        font=ctk.CTkFont(size=12)
+                    ).pack(side="left", padx=5)
+                    
+                    min_var = ctk.StringVar(value="")
+                    min_entry = ctk.CTkEntry(entry_frame, textvariable=min_var, width=80, placeholder_text="0.0")
+                    min_entry.pack(side="left", padx=5)
+                    
+                    max_var = ctk.StringVar(value="")
+                    max_entry = ctk.CTkEntry(entry_frame, textvariable=max_var, width=80, placeholder_text="1.0")
+                    max_entry.pack(side="left", padx=5)
+                    
+                    constraint_entries.append({
+                        'component': f'X{i+1}',
+                        'min_var': min_var,
+                        'max_var': max_var
+                    })
+                    
+            except ValueError:
+                pass
+        
+        # Initialize with 3 factors
+        update_constraints_ui()
         
         # Number of runs
         runs_frame = ctk.CTkFrame(main_frame)
@@ -446,16 +532,50 @@ class MixtureDesignWindow(ctk.CTkToplevel):
                     messagebox.showerror("Erro", "Mínimo de 5 experimentos!")
                     return
                 
+                # Parse constraints
+                constraints_df = None
+                constraints_list = []
+                
+                for entry in constraint_entries:
+                    min_val = entry['min_var'].get().strip()
+                    max_val = entry['max_var'].get().strip()
+                    
+                    if min_val or max_val:
+                        try:
+                            min_level = float(min_val) if min_val else 0.0
+                            max_level = float(max_val) if max_val else 1.0
+                            
+                            if min_level < 0 or max_level > 1 or min_level >= max_level:
+                                messagebox.showerror("Erro", f"Restrições inválidas para {entry['component']}: min={min_level}, max={max_level}")
+                                return
+                            
+                            constraints_list.append({
+                                'component': entry['component'],
+                                'minLevelValue': min_level,
+                                'maxLevelValue': max_level
+                            })
+                        except ValueError:
+                            messagebox.showerror("Erro", f"Valor inválido nas restrições de {entry['component']}")
+                            return
+                
+                if constraints_list:
+                    constraints_df = self.pd.DataFrame(constraints_list)
+                    print(f"DEBUG: Constraints applied:\n{constraints_df}")
+                
                 # Generate design
                 design_df = generate_mixture_design(
                     n_factors=n_factors,
                     n_runs=n_runs,
-                    design_type=design_type
+                    design_type=design_type,
+                    constraints=constraints_df
                 )
                 
                 # Display result
                 result_text.delete("1.0", "end")
-                result_text.insert("1.0", f"Experimento Gerado: {n_runs} runs x {n_factors} fatores\\n\\n")
+                result_text.insert("1.0", f"Experimento Gerado: {n_runs} runs x {n_factors} fatores\n")
+                if constraints_df is not None:
+                    result_text.insert("end", f"Com restrições aplicadas\n")
+                result_text.insert("end", "\n")
                 result_text.insert("end", design_df.to_string(index=True))
                 
                 # Ask to export
@@ -467,6 +587,7 @@ class MixtureDesignWindow(ctk.CTkToplevel):
                     )
                     if filename:
                         design_df.to_excel(filename, index=False)
+                        messagebox.showinfo("Sucesso", f"Experimento exportado para:\n{filename}")
                         messagebox.showinfo("Sucesso", f"Experimento exportado para:\\n{filename}")
                 
             except ValueError as e:
