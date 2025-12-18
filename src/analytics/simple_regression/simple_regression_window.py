@@ -24,6 +24,8 @@ from .simple_regression_utils import (
     create_line_plot_predictions
 )
 
+from src.analytics.profiler_window import ProfilerWindow
+
 # Lazy-loaded libraries
 _pd = None
 _np = None
@@ -56,6 +58,9 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
         self.FigureCanvasTkAgg = FigureCanvasTkAgg
         
         self.df = df
+        
+        # Store model data for profiler
+        self.model_data = None
         
         # Window configuration
         self.title("Regressão Linear Simples")
@@ -187,12 +192,27 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
         ).pack(side="left", padx=10)
         
         # Generate button (Padronizado)
+        button_frame = ctk.CTkFrame(config_frame, fg_color="transparent")
+        button_frame.pack(fill="x", pady=10)
+        
         create_action_button(
-            config_frame,
+            button_frame,
             text="Executar Análise de Regressão",
             command=self.generate_analysis,
             icon="📊"
+        ).pack(side="left", padx=10)
+        
+        # Profiler button
+        self.profiler_btn = ctk.CTkButton(
+            button_frame,
+            text="📈 Abrir Profiler Interativo",
+            command=self.open_profiler,
+            height=40,
+            font=ctk.CTkFont(size=14),
+            fg_color="#9B59B6",
+            state="disabled"  # Disabled until analysis is run
         )
+        self.profiler_btn.pack(side="left", padx=10)
         
         # Results container (initially empty)
         self.results_container = ctk.CTkFrame(self.main_container)
@@ -239,6 +259,17 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
             # Calculate regression
             results = calculate_simple_regression(X, y)
             
+            # Store model data for profiler
+            self.model_data = {
+                'model': results['model'],
+                'X': self.pd.DataFrame({x_col: X}),
+                'y': self.pd.Series(y, name=y_col),
+                'x_cols': [x_col],
+                'y_col': y_col,
+                'model_type': 'linear',
+                'rmse': results['rmse']
+            }
+            
             # Show results
             self.show_summary_table(results, x_col, y_col)
             self.show_anova_table(results)
@@ -253,6 +284,9 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
             if self.show_histogram_var.get():
                 self.show_histogram_plot(results)
             
+            # Enable profiler button
+            self.profiler_btn.configure(state="normal")
+            
             # Update scroll region to accommodate all results
             self.main_container.update_idletasks()
             self.main_container._parent_canvas.configure(scrollregion=self.main_container._parent_canvas.bbox("all"))
@@ -264,6 +298,29 @@ class SimpleRegressionWindow(ctk.CTkToplevel):
             messagebox.showerror(
                 "Erro",
                 f"Erro ao gerar análise:\n{str(e)}"
+            )
+            import traceback
+            traceback.print_exc()
+    
+    def open_profiler(self):
+        """Open interactive profiler window"""
+        if self.model_data is None:
+            messagebox.showwarning(
+                "Aviso",
+                "Execute primeiro a análise de regressão antes de abrir o profiler."
+            )
+            return
+        
+        try:
+            ProfilerWindow(
+                self,
+                self.model_data,
+                title=f"Profiler - Regressão Simples ({self.model_data['y_col']})"
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Erro ao abrir profiler:\n{str(e)}"
             )
             import traceback
             traceback.print_exc()

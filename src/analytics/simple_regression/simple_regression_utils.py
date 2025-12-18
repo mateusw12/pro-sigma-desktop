@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from scipy import stats
 from sklearn.metrics import mean_squared_error
+import statsmodels.api as sm
 
 
 def calculate_simple_regression(X: np.ndarray, y: np.ndarray) -> Dict:
@@ -93,6 +94,10 @@ def calculate_simple_regression(X: np.ndarray, y: np.ndarray) -> Dict:
     RMSE = np.sqrt(mean_squared_error(y, y_pred))
     MAE = np.mean(np.abs(residuals))
     
+    # Create statsmodels model for profiler
+    X_sm = sm.add_constant(X)  # Add constant term
+    model = sm.OLS(y, X_sm).fit()
+    
     results = {
         'coefficients': coefficients,
         'SE_coefficients': SE_coefficients,
@@ -121,7 +126,8 @@ def calculate_simple_regression(X: np.ndarray, y: np.ndarray) -> Dict:
         'MAE': MAE,
         'VIF': VIF,
         'mean_y': np.mean(y),
-        'mean_X': np.mean(X)
+        'mean_X': np.mean(X),
+        'model': model  # Add statsmodels model object
     }
     
     return results
@@ -447,7 +453,7 @@ def create_line_plot_predictions(X: np.ndarray, y: np.ndarray, results: Dict,
     sort_idx = np.argsort(X)
     X_sorted = X[sort_idx]
     y_sorted = y[sort_idx]
-    y_pred_sorted = results['y_pred'][sort_idx]
+    y_pred_sorted = results['predictions'][sort_idx]
     
     fig, ax = plt.subplots(figsize=(10, 6))
     
@@ -464,7 +470,7 @@ def create_line_plot_predictions(X: np.ndarray, y: np.ndarray, results: Dict,
     # Labels and title
     ax.set_xlabel(f'{x_name}', fontsize=12, fontweight='bold')
     ax.set_ylabel(f'{y_name}', fontsize=12, fontweight='bold')
-    ax.set_title(f'Comparação: Real vs Predito\nR² = {results["r_squared"]:.5f}', 
+    ax.set_title(f'Comparação: Real vs Predito\nR² = {results["R_squared"]:.5f}', 
                 fontsize=14, fontweight='bold')
     ax.legend(loc='best', fontsize=10)
     ax.grid(True, alpha=0.3, linestyle='--')

@@ -7,6 +7,7 @@ import pandas as pd
 from scipy import stats
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from typing import List, Tuple, Dict, Optional
+import statsmodels.api as sm
 
 
 def encode_categorical_variables(df: pd.DataFrame, categorical_vars: List[str]) -> Tuple[pd.DataFrame, Dict[str, List[str]]]:
@@ -139,6 +140,11 @@ def calculate_multiple_regression(X: np.ndarray, y: np.ndarray, variable_names: 
     """
     n = len(y)
     
+    # Create statsmodels model for profiler
+    X_df = pd.DataFrame(X, columns=variable_names)
+    X_with_const = sm.add_constant(X_df)
+    model = sm.OLS(y, X_with_const).fit()
+    
     # Add intercept column
     X_with_intercept = np.column_stack([np.ones(n), X])
     
@@ -237,6 +243,7 @@ def calculate_multiple_regression(X: np.ndarray, y: np.ndarray, variable_names: 
         standardized_residuals = np.zeros(n)
     
     return {
+        'model': model,
         'coefficients': coefficients,
         'se_coefficients': se_coefficients,
         't_statistics': t_statistics,
