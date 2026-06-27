@@ -45,10 +45,31 @@ class LazyModule:
 # ===== LAZY IMPORTS DE BIBLIOTECAS PESADAS =====
 
 def _import_matplotlib():
-    """Import customizado para matplotlib"""
+    """Import customizado para matplotlib com rcParams otimizados"""
     import matplotlib
-    # Configura backend antes de importar pyplot
     matplotlib.use('TkAgg')
+
+    # Otimizações de renderização — reduz tempo de draw significativamente
+    matplotlib.rcParams.update({
+        'path.simplify': True,
+        'path.simplify_threshold': 1.0,
+        'agg.path.chunksize': 10000,
+        'figure.max_open_warning': 0,
+        'axes.formatter.use_mathtext': False,
+        'figure.dpi': 80,          # DPI menor = renderização mais rápida
+        'figure.autolayout': False, # tight_layout manual é mais rápido que auto
+        'axes.grid': False,         # Grid desligado por padrão (cada janela liga se precisar)
+        'lines.antialiased': True,
+        'patch.antialiased': True,
+        'text.antialiased': True,
+        'font.size': 9,
+        'axes.labelsize': 9,
+        'axes.titlesize': 10,
+        'xtick.labelsize': 8,
+        'ytick.labelsize': 8,
+        'legend.fontsize': 8,
+    })
+
     import matplotlib.pyplot as plt
     return plt
 
@@ -141,21 +162,19 @@ def get_statsmodels_formula():
 # ===== FUNÇÕES AUXILIARES =====
 
 def preload_heavy_modules():
-    """
-    Pré-carrega módulos pesados em background
-    Útil para carregar durante tela de splash ou idle
-    """
+    """Pré-carrega módulos pesados em background durante tela de login"""
     import threading
-    
+
     def load_in_background():
-        # Carrega módulos mais pesados primeiro
-        get_matplotlib()
-        get_scipy_stats()
+        # Ordem: mais pesados primeiro para que estejam prontos quando o usuário abrir ferramentas
         get_numpy()
         get_pandas()
-    
-    thread = threading.Thread(target=load_in_background, daemon=True)
-    thread.start()
+        get_matplotlib()
+        get_scipy_stats()
+        get_scipy_optimize()
+        get_statsmodels_api()
+
+    threading.Thread(target=load_in_background, daemon=True).start()
 
 
 def is_module_loaded(module_lazy: LazyModule) -> bool:

@@ -5,6 +5,7 @@ Importação de dados e seleção de ferramentas
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import pandas as pd
+import threading
 from pathlib import Path
 from typing import Optional
 from src.utils.file_history import FileHistory
@@ -524,9 +525,9 @@ class HomePage(ctk.CTkFrame):
         if tools_list:
             self._create_category(category_name, tools_list)
         
-        # Agenda criação da próxima categoria
+        # Agenda criação da próxima categoria (1ms apenas para ceder controle à UI)
         if index + 1 < len(categories_items):
-            self.after(5, lambda: self._create_categories_async(categories_items, index + 1))
+            self.after(1, lambda: self._create_categories_async(categories_items, index + 1))
     
     def _create_category(self, category_name, tools_list):
         """Cria uma categoria de ferramentas"""
@@ -637,27 +638,26 @@ class HomePage(ctk.CTkFrame):
         )
     
     def _create_tooltip(self, widget, text):
-        """Cria tooltip para o widget"""
+        """Cria tooltip para o widget — criado uma vez e reutilizado"""
+        tooltip = ctk.CTkLabel(
+            widget,
+            text=text,
+            font=ctk.CTkFont(size=9),
+            text_color="gray70",
+            fg_color="gray10",
+            corner_radius=6,
+            padx=8,
+            pady=4,
+            wraplength=160,
+        )
+
         def show_tooltip(event):
-            # Cria label flutuante com descrição
-            tooltip = ctk.CTkLabel(
-                widget,
-                text=text,
-                font=ctk.CTkFont(size=9),
-                text_color="gray70",
-                fg_color="gray10",
-                corner_radius=6,
-                padx=8,
-                pady=4
-            )
             tooltip.place(relx=0.5, rely=1.0, anchor="n", y=5)
-            widget._tooltip = tooltip
-        
+            tooltip.lift()
+
         def hide_tooltip(event):
-            if hasattr(widget, '_tooltip'):
-                widget._tooltip.destroy()
-                delattr(widget, '_tooltip')
-        
+            tooltip.place_forget()
+
         widget.bind("<Enter>", show_tooltip)
         widget.bind("<Leave>", hide_tooltip)
     
@@ -688,69 +688,47 @@ class HomePage(ctk.CTkFrame):
             self.load_file(file_path, 'csv')
     
     def load_file(self, file_path: str, file_type: str):
-        """
-        Carrega arquivo de dados
-        
-        Args:
-            file_path: Caminho do arquivo
-            file_type: Tipo do arquivo (excel ou csv)
-        """
-        # Mostra loading
+        """Carrega arquivo de dados em thread separada para não travar a UI"""
         self.show_loading(True)
-        
-        # Usa after para não travar a UI
-        self.after(100, lambda: self._load_file_async(file_path, file_type))
-    
-    def _load_file_async(self, file_path: str, file_type: str):
-        """
-        Carrega arquivo de forma assíncrona
-        
-        Args:
-            file_path: Caminho do arquivo
-            file_type: Tipo do arquivo (excel ou csv)
-        """
-        try:
-            # Carrega dados
-            if file_type == 'excel':
-                self.current_data = pd.read_excel(file_path)
-            else:
-                self.current_data = pd.read_csv(file_path)
-            
-            self.current_file_path = file_path
-            
-            # Atualiza status
-            file_name = Path(file_path).name
-            rows, cols = self.current_data.shape
-            
-            # Adiciona ao histórico
-            self.file_history.add_file(file_path, file_type, rows, cols)
-            
-            self.import_status_label.configure(
-                text=f"✓ Arquivo carregado: {file_name}",
-                text_color="#4CAF50"
-            )
-            
-            # Mostra info do arquivo
-            self.show_file_info(file_name, rows, cols)
-            
-            # Remove loading
-            self.show_loading(False)
-            
-            messagebox.showinfo(
-                "Sucesso",
-                f"Arquivo carregado com sucesso!\n\n"
-                f"Linhas: {rows}\n"
-                f"Colunas: {cols}"
-            )
-            
-        except Exception as e:
-            # Remove loading
-            self.show_loading(False)
-            
-            messagebox.showerror(
-                "Erro",
-                f"Erro ao carregar arquivo:\n{str(e)}"
-            )
+
+        def _read_in_thread():
+            try:
+                if file_type == 'excel':
+                    data = pd.read_excel(file_path)
+                else:
+                    data = pd.read_csv(file_path)
+                self.after(0, lambda: self._on_file_loaded(data, file_path, file_type))
+            except Exception as e:
+                self.after(0, lambda: self._on_file_error(str(e)))
+
+        threading.Thread(target=_read_in_thread, daemon=True).start()
+
+    def _on_file_loaded(self, data: pd.DataFrame, file_path: str, file_type: str):
+        """Callback (na thread da UI) após leitura bem-sucedida"""
+        self.current_data = data
+        self.current_file_path = file_path
+
+        file_name = Path(file_path).name
+        rows, cols = data.shape
+
+        self.file_history.add_file(file_path, file_type, rows, cols)
+
+        self.import_status_label.configure(
+            text=f"✓ Arquivo carregado: {file_name}",
+            text_color="#4CAF50"
+        )
+        self.show_file_info(file_name, rows, cols)
+        self.show_loading(False)
+
+        messagebox.showinfo(
+            "Sucesso",
+            f"Arquivo carregado com sucesso!\n\nLinhas: {rows}\nColunas: {cols}"
+        )
+
+    def _on_file_error(self, error_msg: str):
+        """Callback (na thread da UI) após erro de leitura"""
+        self.show_loading(False)
+        messagebox.showerror("Erro", f"Erro ao carregar arquivo:\n{error_msg}")
     
     def show_loading(self, show: bool):
         """
