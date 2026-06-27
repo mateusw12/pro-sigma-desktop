@@ -487,6 +487,24 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'pro',
                 'in_development': False
             },
+            'box_cox': {
+                'title': 'Transformação Box-Cox',
+                'description': 'Encontra o lambda ótimo para normalização de dados',
+                'plan': 'intermediate',
+                'in_development': False
+            },
+            'sample_size_explorer': {
+                'title': 'Tamanho de Amostra',
+                'description': 'Calcula N, margem de erro e nível de confiança',
+                'plan': 'basic',
+                'in_development': False
+            },
+            'time_series': {
+                'title': 'Séries Temporais',
+                'description': 'Decomposição, diagnóstico e teste ADF de estacionariedade',
+                'plan': 'intermediate',
+                'in_development': False
+            },
         }
         
         # Obtém features disponíveis
@@ -560,7 +578,8 @@ class HomePage(ctk.CTkFrame):
             'ccd': '🎯', 'neural_networks': '🧠', 'decision_tree': '🌳', 
             'descriptive_stats': '📊', 'ishikawa': '🐟', 'tree_models': '🌳',
             'gage_rr': '📏', 'run_chart': '📈', 'pareto': '📊', 'k_means': '🔵',
-            'gaussian_process': '📉', 'logistic_regression': '🎯', 'mixture_design': '🧪'
+            'gaussian_process': '📉', 'logistic_regression': '🎯', 'mixture_design': '🧪',
+            'box_cox': '🔄', 'sample_size_explorer': '🔢', 'time_series': '📅'
         }
         
         for idx, (feature_id, tool_info) in enumerate(tools_list):
@@ -815,20 +834,25 @@ class HomePage(ctk.CTkFrame):
         Args:
             feature_id: ID da ferramenta
         """
-        # Monte Carlo, Stack-Up, and Ishikawa don't need data input
+        # Tools that don't need data input
         if feature_id == 'monte_carlo':
             from src.analytics.monte_carlo.monte_carlo_window import MonteCarloWindow
             MonteCarloWindow(self)
             return
-        
+
         if feature_id == 'stackup':
             from src.analytics.stack_up.stack_up_window import StackUpWindow
             StackUpWindow(self)
             return
-        
+
         if feature_id == 'ishikawa':
             from src.analytics.ishikawa.ishikawa_window import IshikawaDiagramWindow
             IshikawaDiagramWindow(self)
+            return
+
+        if feature_id == 'sample_size_explorer':
+            from src.analytics.sample_size_explorer.sample_size_explorer_window import SampleSizeExplorerWindow
+            SampleSizeExplorerWindow(self)
             return
         
         # Check if there's any data available (current or historical)
@@ -928,6 +952,12 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'mixture_design':
                 from src.analytics.mixture_design.mixture_design_window import MixtureDesignWindow
                 MixtureDesignWindow(self, selected_data)
+            elif feature_id == 'box_cox':
+                from src.analytics.box_cox.box_cox_window import BoxCoxWindow
+                BoxCoxWindow(self, selected_data)
+            elif feature_id == 'time_series':
+                from src.analytics.time_series.time_series_window import TimeSeriesWindow
+                TimeSeriesWindow(self, selected_data)
             else:
                 # TODO: Implementar outras ferramentas
                 messagebox.showinfo(

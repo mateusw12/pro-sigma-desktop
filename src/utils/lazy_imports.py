@@ -97,6 +97,9 @@ lazy_matplotlib_figure = LazyModule('matplotlib.figure', _import_matplotlib_figu
 lazy_matplotlib_backend = LazyModule('matplotlib.backends.backend_tkagg', _import_matplotlib_backend)
 lazy_statsmodels_api = LazyModule('statsmodels.api')
 lazy_statsmodels_formula = LazyModule('statsmodels.formula.api')
+lazy_statsmodels_tsa_seasonal = LazyModule('statsmodels.tsa.seasonal')
+lazy_statsmodels_tsa_stattools = LazyModule('statsmodels.tsa.stattools')
+lazy_statsmodels_tsa_arima = LazyModule('statsmodels.tsa.arima.model')
 
 
 def get_numpy():
@@ -157,6 +160,21 @@ def get_statsmodels_api():
 def get_statsmodels_formula():
     """Retorna statsmodels.formula.api, carregando apenas quando necessário"""
     return lazy_statsmodels_formula._load_module()
+
+
+def get_statsmodels_tsa_seasonal():
+    """Retorna statsmodels.tsa.seasonal, carregando apenas quando necessário"""
+    return lazy_statsmodels_tsa_seasonal._load_module()
+
+
+def get_statsmodels_tsa_stattools():
+    """Retorna statsmodels.tsa.stattools, carregando apenas quando necessário"""
+    return lazy_statsmodels_tsa_stattools._load_module()
+
+
+def get_statsmodels_tsa_arima():
+    """Retorna statsmodels.tsa.arima.model, carregando apenas quando necessário"""
+    return lazy_statsmodels_tsa_arima._load_module()
 
 
 # ===== FUNÇÕES AUXILIARES =====
