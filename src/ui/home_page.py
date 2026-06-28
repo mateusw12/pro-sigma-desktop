@@ -246,8 +246,21 @@ class HomePage(ctk.CTkFrame):
             hover_color="#1E5BA8",
             corner_radius=8
         )
-        self.import_csv_btn.pack(side="left")
-        
+        self.import_csv_btn.pack(side="left", padx=(0, 10))
+
+        self.open_editor_btn = ctk.CTkButton(
+            buttons_row,
+            text="📋 Editor de Dados",
+            command=self._open_data_editor,
+            width=160,
+            height=45,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color="#7B2D8B",
+            hover_color="#5C2167",
+            corner_radius=8
+        )
+        self.open_editor_btn.pack(side="left")
+
         # Status da importação
         self.import_status_label = ctk.CTkLabel(
             button_container,
@@ -505,6 +518,12 @@ class HomePage(ctk.CTkFrame):
                 'plan': 'intermediate',
                 'in_development': False
             },
+            'data_editor': {
+                'title': 'Editor de Dados',
+                'description': 'Crie, edite e gere dados por fórmulas e distribuições',
+                'plan': 'basic',
+                'in_development': False
+            },
         }
         
         # Obtém features disponíveis
@@ -579,7 +598,8 @@ class HomePage(ctk.CTkFrame):
             'descriptive_stats': '📊', 'ishikawa': '🐟', 'tree_models': '🌳',
             'gage_rr': '📏', 'run_chart': '📈', 'pareto': '📊', 'k_means': '🔵',
             'gaussian_process': '📉', 'logistic_regression': '🎯', 'mixture_design': '🧪',
-            'box_cox': '🔄', 'sample_size_explorer': '🔢', 'time_series': '📅'
+            'box_cox': '🔄', 'sample_size_explorer': '🔢', 'time_series': '📅',
+            'data_editor': '📋'
         }
         
         for idx, (feature_id, tool_info) in enumerate(tools_list):
@@ -680,6 +700,19 @@ class HomePage(ctk.CTkFrame):
         widget.bind("<Enter>", show_tooltip)
         widget.bind("<Leave>", hide_tooltip)
     
+    def _open_data_editor(self):
+        from src.analytics.data_editor.data_editor_window import DataEditorWindow
+
+        def _on_editor_data(df):
+            self.current_data = df
+            self.import_status_label.configure(
+                text=f"✓ Dados do editor carregados: {len(df)} linhas × {len(df.columns)} colunas",
+                text_color="#4CAF50"
+            )
+            self.show_file_info("Editor de Dados", len(df), len(df.columns))
+
+        DataEditorWindow(self, initial_df=self.current_data, on_use_data=_on_editor_data)
+
     def import_excel(self):
         """Importa arquivo Excel"""
         file_path = filedialog.askopenfilename(
@@ -853,6 +886,25 @@ class HomePage(ctk.CTkFrame):
         if feature_id == 'sample_size_explorer':
             from src.analytics.sample_size_explorer.sample_size_explorer_window import SampleSizeExplorerWindow
             SampleSizeExplorerWindow(self)
+            return
+
+        if feature_id == 'data_editor':
+            from src.analytics.data_editor.data_editor_window import DataEditorWindow
+
+            def _on_editor_data(df):
+                self.current_data = df
+                messagebox.showinfo(
+                    "Dados Carregados",
+                    f"Dados do editor disponíveis para análise!\n"
+                    f"{len(df)} linhas × {len(df.columns)} colunas",
+                    parent=self
+                )
+
+            DataEditorWindow(
+                self,
+                initial_df=self.current_data,
+                on_use_data=_on_editor_data
+            )
             return
         
         # Check if there's any data available (current or historical)

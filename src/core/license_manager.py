@@ -19,7 +19,8 @@ class LicenseManager:
             'features': [
                 'variability', 'process_capability', 'hypothesis_test',
                 'distribution_test', 'cov_ems', 'normalization_test',
-                'descriptive_stats', 'ishikawa', 'gage_rr', 'run_chart', 'pareto'
+                'descriptive_stats', 'ishikawa', 'gage_rr', 'run_chart', 'pareto',
+                'data_editor', 'sample_size_explorer',
             ]
         },
         'intermediate': {
@@ -27,9 +28,10 @@ class LicenseManager:
             'features': [
                 'variability', 'process_capability', 'hypothesis_test',
                 'distribution_test', 'cov_ems',
-                'text_analysis',  'control_charts', 
-                'dashboard', 'monte_carlo', 'cov_ems', 'descriptive_stats',
+                'text_analysis', 'control_charts',
+                'dashboard', 'monte_carlo', 'descriptive_stats',
                 'ishikawa', 'gage_rr', 'run_chart', 'pareto', 'doe',
+                'data_editor', 'sample_size_explorer', 'box_cox', 'time_series',
             ]
         },
         'pro': {
@@ -37,13 +39,14 @@ class LicenseManager:
             'features': [
                 'variability', 'process_capability', 'hypothesis_test',
                 'distribution_test', 'cov_ems',
-                'text_analysis', 'normalization_test', 'control_charts', 
+                'text_analysis', 'normalization_test', 'control_charts',
                 'dashboard', 'monte_carlo',
                 'simple_regression', 'multiple_regression', 'multivariate',
                 'stackup', 'doe', 'space_filling', 'nonlinear', 'ccd',
                 'neural_networks', 'tree_models', 'gage_rr', 'descriptive_stats',
-                'ishikawa', 'run_chart', 'pareto', 'k_means', 'gaussian_process', 
-                'logistic_regression', 'mixture_design'
+                'ishikawa', 'run_chart', 'pareto', 'k_means', 'gaussian_process',
+                'logistic_regression', 'mixture_design',
+                'data_editor', 'sample_size_explorer', 'box_cox', 'time_series',
             ]
         }
     }
