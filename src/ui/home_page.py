@@ -2,6 +2,7 @@
 Página Inicial do Pro Sigma
 Importação de dados e seleção de ferramentas
 """
+import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import pandas as pd
@@ -10,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 from src.utils.file_history import FileHistory
 from src.utils.performance_utils import resize_optimizer, optimize_frame_resize
+from src.ui.inline_spreadsheet import InlineSpreadsheet
 
 
 class HomePage(ctk.CTkFrame):
@@ -96,10 +98,18 @@ class HomePage(ctk.CTkFrame):
             font=ctk.CTkFont(size=10),
             text_color="gray"
         )
-        plan_expiry.pack(pady=(0, 10))
+        plan_expiry.pack(pady=(0, 5))
+
+        plan_version = ctk.CTkLabel(
+            plan_info_frame,
+            text="v0.1.0",
+            font=ctk.CTkFont(size=9),
+            text_color="gray60"
+        )
+        plan_version.pack(pady=(0, 10))
         
         # Separador
-        separator1 = ctk.CTkFrame(self.sidebar, height=2, fg_color="gray30")
+        separator1 = ctk.CTkFrame(self.sidebar, height=2, fg_color="#CCCCCC")
         separator1.pack(fill="x", padx=20, pady=20)
         
         # Botões do menu
@@ -128,44 +138,48 @@ class HomePage(ctk.CTkFrame):
             self.sidebar,
             text="📚 Histórico de Arquivos",
             command=self.show_history,
-            fg_color="gray30",
-            hover_color="gray20",
+            fg_color="#E8EDF2",
+            hover_color="#D0D8E4",
+            text_color="#2D3748",
             height=40,
             font=ctk.CTkFont(size=12)
         )
         history_button.pack(fill="x", padx=10, pady=5)
-        
+
         # Botão Inserir Nova Licença
         new_license_button = ctk.CTkButton(
             self.sidebar,
             text="🔑 Inserir Nova Licença",
             command=self.insert_new_license,
-            fg_color="gray30",
-            hover_color="gray20",
+            fg_color="#E8EDF2",
+            hover_color="#D0D8E4",
+            text_color="#2D3748",
             height=40,
             font=ctk.CTkFont(size=12)
         )
         new_license_button.pack(fill="x", padx=10, pady=5)
-        
+
         # Botão Suporte
         support_button = ctk.CTkButton(
             self.sidebar,
             text="💬 Suporte",
             command=self.open_support,
-            fg_color="gray30",
-            hover_color="gray20",
+            fg_color="#E8EDF2",
+            hover_color="#D0D8E4",
+            text_color="#2D3748",
             height=40,
             font=ctk.CTkFont(size=12)
         )
         support_button.pack(fill="x", padx=10, pady=5)
-        
+
         # Botão Sobre
         about_button = ctk.CTkButton(
             self.sidebar,
             text="ℹ️ Sobre",
             command=self.show_about,
-            fg_color="gray30",
-            hover_color="gray20",
+            fg_color="#E8EDF2",
+            hover_color="#D0D8E4",
+            text_color="#2D3748",
             height=40,
             font=ctk.CTkFont(size=12)
         )
@@ -187,145 +201,52 @@ class HomePage(ctk.CTkFrame):
         # ===== ÁREA PRINCIPAL =====
         content_area = ctk.CTkFrame(main_container, fg_color="transparent")
         content_area.pack(side="right", fill="both", expand=True)
-        
-        # ===== ÁREA DE IMPORTAÇÃO (TOPO) =====
-        import_frame = ctk.CTkFrame(content_area, corner_radius=10)
-        import_frame.pack(fill="x", padx=20, pady=(20, 10))
-        
-        # Header da área de importação
-        import_header = ctk.CTkFrame(import_frame, fg_color="transparent")
-        import_header.pack(fill="x", padx=20, pady=(20, 10))
-        
-        import_title = ctk.CTkLabel(
-            import_header,
-            text="📁 Importar Dados",
-            font=ctk.CTkFont(size=18, weight="bold")
-        )
-        import_title.pack(side="left")
-        
-        import_desc = ctk.CTkLabel(
-            import_header,
-            text="Excel (.xlsx, .xls) ou CSV (.csv)",
-            font=ctk.CTkFont(size=11),
-            text_color="gray"
-        )
-        import_desc.pack(side="left", padx=(10, 0))
-        
-        # Container principal da importação
-        import_content = ctk.CTkFrame(import_frame, fg_color="transparent")
-        import_content.pack(fill="x", padx=20, pady=(0, 20))
-        
-        # Lado esquerdo: Botões
-        button_container = ctk.CTkFrame(import_content, fg_color="transparent")
-        button_container.pack(side="left", fill="x", expand=True)
-        
-        buttons_row = ctk.CTkFrame(button_container, fg_color="transparent")
-        buttons_row.pack(anchor="w")
-        
+
+        # ── Toolbar de importação (topo compacto) ────────────────────────────
+        toolbar = ctk.CTkFrame(content_area, fg_color="transparent")
+        toolbar.pack(fill="x", padx=15, pady=(12, 0))
+
         self.import_excel_btn = ctk.CTkButton(
-            buttons_row,
-            text="📊 Importar Excel",
+            toolbar, text="📊 Importar Excel",
             command=self.import_excel,
-            width=160,
-            height=45,
-            font=ctk.CTkFont(size=13, weight="bold"),
-            fg_color="#2E86DE",
-            hover_color="#1E5BA8",
-            corner_radius=8
-        )
-        self.import_excel_btn.pack(side="left", padx=(0, 10))
-        
-        self.import_csv_btn = ctk.CTkButton(
-            buttons_row,
-            text="📄 Importar CSV",
-            command=self.import_csv,
-            width=160,
-            height=45,
-            font=ctk.CTkFont(size=13, weight="bold"),
-            fg_color="#2E86DE",
-            hover_color="#1E5BA8",
-            corner_radius=8
-        )
-        self.import_csv_btn.pack(side="left", padx=(0, 10))
-
-        self.open_editor_btn = ctk.CTkButton(
-            buttons_row,
-            text="📋 Editor de Dados",
-            command=self._open_data_editor,
-            width=160,
-            height=45,
-            font=ctk.CTkFont(size=13, weight="bold"),
-            fg_color="#7B2D8B",
-            hover_color="#5C2167",
-            corner_radius=8
-        )
-        self.open_editor_btn.pack(side="left")
-
-        # Status da importação
-        self.import_status_label = ctk.CTkLabel(
-            button_container,
-            text="💡 Nenhum arquivo carregado ainda",
-            font=ctk.CTkFont(size=12),
-            text_color="gray",
-            anchor="w"
-        )
-        self.import_status_label.pack(anchor="w", pady=(10, 0))
-        
-        # Lado direito: Info do arquivo (se carregado)
-        self.file_info_frame = ctk.CTkFrame(import_content, corner_radius=8)
-        # Inicialmente oculto, será mostrado quando um arquivo for carregado
-        
-        # ===== FERRAMENTAS DISPONÍVEIS =====
-        tools_container = ctk.CTkFrame(content_area, fg_color="transparent")
-        tools_container.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        
-        # Header das ferramentas
-        tools_header = ctk.CTkFrame(tools_container, fg_color="transparent")
-        tools_header.pack(fill="x", pady=(0, 15))
-        
-        tools_title = ctk.CTkLabel(
-            tools_header,
-            text="🔧 Ferramentas Disponíveis",
-            font=ctk.CTkFont(size=20, weight="bold")
-        )
-        tools_title.pack(side="left")
-        
-        # Badge com número de ferramentas
-        features_count = len(self.license_data.get('features', []))
-        count_badge = ctk.CTkLabel(
-            tools_header,
-            text=f"{features_count}",
+            width=145, height=36,
             font=ctk.CTkFont(size=12, weight="bold"),
-            text_color="white",
-            fg_color="#2E86DE",
-            corner_radius=15,
-            width=30,
-            height=30
+            fg_color="#2E86DE", hover_color="#1E5BA8", corner_radius=7
         )
-        count_badge.pack(side="left", padx=(10, 0))
-        
-        # Grid de ferramentas com scroll
-        self.tools_scroll = ctk.CTkScrollableFrame(
-            tools_container,
-            fg_color="transparent",
-            scrollbar_button_color="#2E86DE",
-            scrollbar_button_hover_color="#1E5BA8"
+        self.import_excel_btn.pack(side="left", padx=(0, 8))
+
+        self.import_csv_btn = ctk.CTkButton(
+            toolbar, text="📄 Importar CSV",
+            command=self.import_csv,
+            width=140, height=36,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color="#2E86DE", hover_color="#1E5BA8", corner_radius=7
         )
-        self.tools_scroll.pack(fill="both", expand=True)
-        optimize_frame_resize(self.tools_scroll)
-        
-        # Otimiza scrolling
-        self.tools_scroll._scrollbar.configure(width=10)
-        
-        # Cria botões das ferramentas
-        self.create_tool_buttons()
-    
-    def create_tool_buttons(self):
-        """Cria botões para as ferramentas disponíveis (otimizado)"""
-        
-        # Definição das ferramentas
-        # in_development: True = ferramenta desabilitada (em desenvolvimento)
-        tools_definition = {
+        self.import_csv_btn.pack(side="left", padx=(0, 8))
+
+        self.import_status_label = ctk.CTkLabel(
+            toolbar, text="Cole dados do Excel com Ctrl+V na tabela abaixo",
+            font=ctk.CTkFont(size=11), text_color="gray", anchor="w"
+        )
+        self.import_status_label.pack(side="left", padx=(8, 0))
+
+        # ── Spreadsheet ocupando toda a área principal ───────────────────────
+        sheet_outer = tk.Frame(content_area, bg="white", bd=1, relief="solid")
+        sheet_outer.pack(fill="both", expand=True, padx=15, pady=(8, 10))
+
+        self.spreadsheet = InlineSpreadsheet(
+            sheet_outer,
+            on_data_change=self._on_spreadsheet_data_change,
+            fg_color="transparent"
+        )
+        self.spreadsheet.pack(fill="both", expand=True)
+
+        # Cria menu bar com acesso às ferramentas
+        self._build_menu_bar()
+
+    def _get_tools_definition(self) -> dict:
+        """Retorna a definição completa de ferramentas"""
+        return {
             'process_capability': {
                 'title': 'Process Capability',
                 'description': 'Cálculo de Cp, Cpk, Pp, Ppk',
@@ -347,18 +268,6 @@ class HomePage(ctk.CTkFrame):
             'cov_ems': {
                 'title': 'COV',
                 'description': 'Análise de coeficiente de variação',
-                'plan': 'basic',
-                'in_development': False
-            },
-            'descriptive_stats': {
-                'title': 'Descriptive Statistics',
-                'description': 'Histograms, boxplots, summary metrics',
-                'plan': 'basic',
-                'in_development': False
-            },
-            'ishikawa': {
-                'title': 'Diagrama de Ishikawa',
-                'description': 'Diagrama de Causa e Efeito (Espinha de Peixe)',
                 'plan': 'basic',
                 'in_development': False
             },
@@ -525,191 +434,94 @@ class HomePage(ctk.CTkFrame):
                 'in_development': False
             },
         }
-        
-        # Obtém features disponíveis
-        available_features = self.license_data.get('features', [])
-        
-        # Organiza ferramentas por categoria
-        categories = {
-            'Básico': [],
-            'Intermediário': [],
-            'Avançado': []
-        }
-        
-        plan_to_category = {
-            'basic': 'Básico',
-            'intermediate': 'Intermediário',
-            'pro': 'Avançado'
-        }
-        
-        for feature_id, tool_info in tools_definition.items():
-            is_available = feature_id in available_features
-            if is_available:
-                category = plan_to_category.get(tool_info['plan'], 'Básico')
-                categories[category].append((feature_id, tool_info))
-        
-        # Cria seção para cada categoria que tenha ferramentas (otimizado)
-        # Usa after() para criar widgets de forma não-bloqueante
-        self._create_categories_async(list(categories.items()), 0)
-    
-    def _create_categories_async(self, categories_items, index):
-        """Cria categorias de forma assíncrona para não travar a UI"""
-        if index >= len(categories_items):
-            return
-        
-        category_name, tools_list = categories_items[index]
-        
-        if tools_list:
-            self._create_category(category_name, tools_list)
-        
-        # Agenda criação da próxima categoria (1ms apenas para ceder controle à UI)
-        if index + 1 < len(categories_items):
-            self.after(1, lambda: self._create_categories_async(categories_items, index + 1))
-    
-    def _create_category(self, category_name, tools_list):
-        """Cria uma categoria de ferramentas"""
-        # Header da categoria
-        category_header = ctk.CTkFrame(self.tools_scroll, fg_color="transparent")
-        category_header.pack(fill="x", pady=(15, 10), padx=5)
-        
-        category_label = ctk.CTkLabel(
-            category_header,
-            text=f"■ {category_name}",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color="#2E86DE",
-            anchor="w"
-        )
-        category_label.pack(side="left")
-        
-        # Grid de ferramentas desta categoria
-        row_frame = None
-        col_count = 0
-        max_cols = 4  # 4 botões por linha para layout mais clean
-        
-        # Ícones pré-definidos para evitar recriação
-        icon_map = {
-            'variability': '📊', 'process_capability': '📈', 'hypothesis_test': '🔬',
-            'distribution_test': '📉', 'cov_ems': '📐', 'distribution_analysis': '📊',
-            'analytics': '🔍', 'text_analysis': '📝', 'normalization_test': '✓',
-            'control_charts': '📊', 'dashboard': '📊', 'monte_carlo': '🎲',
-            'simple_regression': '📈', 'multiple_regression': '📈', 'multivariate': '🔍',
-            'stackup': '📏', 'doe': '🧪', 'space_filling': '⬜', 'nonlinear': '📉',
-            'ccd': '🎯', 'neural_networks': '🧠', 'decision_tree': '🌳', 
-            'descriptive_stats': '📊', 'ishikawa': '🐟', 'tree_models': '🌳',
-            'gage_rr': '📏', 'run_chart': '📈', 'pareto': '📊', 'k_means': '🔵',
-            'gaussian_process': '📉', 'logistic_regression': '🎯', 'mixture_design': '🧪',
-            'box_cox': '🔄', 'sample_size_explorer': '🔢', 'time_series': '📅',
-            'data_editor': '📋'
-        }
-        
-        for idx, (feature_id, tool_info) in enumerate(tools_list):
-            # Cria nova linha a cada max_cols cards
-            if col_count == 0:
-                row_frame = ctk.CTkFrame(self.tools_scroll, fg_color="transparent")
-                row_frame.pack(fill="x", pady=5)
-            
-            # Card da ferramenta (simplificado para melhor performance)
-            tool_card = self._create_tool_card(row_frame, feature_id, tool_info, icon_map)
-            
-            col_count += 1
-            if col_count >= max_cols:
-                col_count = 0
-    
-    def _create_tool_card(self, parent, feature_id, tool_info, icon_map):
-        """Cria um card de ferramenta otimizado com design clean"""
-        # Botão em formato de card
-        icon = icon_map.get(feature_id, '🔧')
-        
-        # Verificar se está em desenvolvimento
-        is_in_development = tool_info.get('in_development', False)
-        
-        # Configuração visual baseada no status
-        if is_in_development:
-            # Ferramenta desabilitada
-            fg_color = "gray15"
-            hover_color = "gray15"
-            text_color = "gray50"
-            border_color = "gray25"
-            button_text = f"{icon}\n\n{tool_info['title']}\n\n🚧 Em Desenvolvimento"
-            command = lambda: self._show_in_development_message(tool_info['title'])
-        else:
-            # Ferramenta ativa
-            fg_color = "gray20"
-            hover_color = "#2E86DE"
-            text_color = "white"
-            border_color = "gray30"
-            button_text = f"{icon}\n\n{tool_info['title']}"
-            command = lambda: self.open_tool(feature_id)
-        
-        tool_button = ctk.CTkButton(
-            parent,
-            text=button_text,
-            command=command,
-            width=180,
-            height=140,
-            corner_radius=12,
-            fg_color=fg_color,
-            hover_color=hover_color,
-            text_color=text_color,
-            border_width=2,
-            border_color=border_color,
-            font=ctk.CTkFont(size=11 if is_in_development else 12, weight="bold"),
-            anchor="center"
-        )
-        tool_button.pack(side="left", padx=8, pady=8)
-        
-        # Tooltip com descrição (aparece no hover)
-        tooltip_text = tool_info['description']
-        if is_in_development:
-            tooltip_text += "\n\n⚠️ Esta ferramenta ainda está em desenvolvimento e será disponibilizada em breve."
-        self._create_tooltip(tool_button, tooltip_text)
-        
-        return tool_button
-    
-    def _show_in_development_message(self, tool_name):
-        """Mostra mensagem quando ferramenta em desenvolvimento é clicada"""
-        messagebox.showinfo(
-            "Ferramenta em Desenvolvimento",
-            f"🚧 {tool_name}\n\n"
-            "Esta ferramenta ainda está em desenvolvimento e será "
-            "disponibilizada em uma próxima versão do Pro Sigma.\n\n"
-            "Agradecemos sua compreensão!"
-        )
-    
-    def _create_tooltip(self, widget, text):
-        """Cria tooltip para o widget — criado uma vez e reutilizado"""
-        tooltip = ctk.CTkLabel(
-            widget,
-            text=text,
-            font=ctk.CTkFont(size=9),
-            text_color="gray70",
-            fg_color="gray10",
-            corner_radius=6,
-            padx=8,
-            pady=4,
-            wraplength=160,
-        )
 
-        def show_tooltip(event):
-            tooltip.place(relx=0.5, rely=1.0, anchor="n", y=5)
-            tooltip.lift()
+    def _build_menu_bar(self):
+        """Cria o menu bar nativo com ferramentas agrupadas por domínio."""
+        tools_def = self._get_tools_definition()
+        available  = self.license_data.get('features', [])
 
-        def hide_tooltip(event):
-            tooltip.place_forget()
+        # Agrupamento por domínio (sem rótulos de plano)
+        DOMAIN_GROUPS = [
+            ("Estatística", [
+                "hypothesis_test", "distribution_test",
+                "normality_test", "cov_ems", "box_cox", "sample_size_explorer",
+                "multivariate",
+            ]),
+            ("Qualidade", [
+                "process_capability", "gage_rr", "pareto", "variability",
+            ]),
+            ("Controle", [
+                "control_charts", "run_chart", "monte_carlo", "time_series",
+            ]),
+            ("Regressão", [
+                "simple_regression", "multiple_regression", "nonlinear",
+                "logistic_regression", "gaussian_process",
+            ]),
+            ("Machine Learning", [
+                "neural_networks", "tree_models", "k_means",
+            ]),
+            ("DOE", [
+                "ccd", "space_filling", "mixture_design", "stackup",
+            ]),
+            ("Dados", [
+                "text_analysis",
+            ]),
+        ]
 
-        widget.bind("<Enter>", show_tooltip)
-        widget.bind("<Leave>", hide_tooltip)
-    
+        menubar = tk.Menu(self.parent)
+
+        # ── Arquivo ───────────────────────────────────────────────────────────
+        arq = tk.Menu(menubar, tearoff=0)
+        arq.add_command(label="Importar Excel",        command=self.import_excel)
+        arq.add_command(label="Importar CSV",          command=self.import_csv)
+        arq.add_separator()
+        arq.add_command(label="Histórico de Arquivos", command=self.show_history)
+        arq.add_separator()
+        arq.add_command(label="Editor de Dados",       command=self._open_data_editor)
+        menubar.add_cascade(label="Arquivo", menu=arq)
+
+        # ── Domínios ──────────────────────────────────────────────────────────
+        for domain_label, feature_ids in DOMAIN_GROUPS:
+            domain_menu = tk.Menu(menubar, tearoff=0)
+            has_any = False
+            for fid in feature_ids:
+                if fid not in available:
+                    continue
+                info = tools_def.get(fid)
+                if not info:
+                    continue
+                title = info["title"]
+                in_dev = info.get("in_development", False)
+                if in_dev:
+                    title += "  [Em breve]"
+                domain_menu.add_command(
+                    label=title,
+                    command=lambda f=fid: self.open_tool(f),
+                    state="disabled" if in_dev else "normal"
+                )
+                has_any = True
+            if has_any:
+                menubar.add_cascade(label=domain_label, menu=domain_menu)
+
+        # ── Ajuda ─────────────────────────────────────────────────────────────
+        ajuda = tk.Menu(menubar, tearoff=0)
+        ajuda.add_command(label="Suporte", command=self.open_support)
+        ajuda.add_command(label="Sobre",   command=self.show_about)
+        menubar.add_cascade(label="Ajuda", menu=ajuda)
+
+        self.parent.config(menu=menubar)
+        self._menubar = menubar
+
     def _open_data_editor(self):
         from src.analytics.data_editor.data_editor_window import DataEditorWindow
 
         def _on_editor_data(df):
             self.current_data = df
+            self.spreadsheet.load_dataframe(df)
             self.import_status_label.configure(
-                text=f"✓ Dados do editor carregados: {len(df)} linhas × {len(df.columns)} colunas",
-                text_color="#4CAF50"
+                text=f"✓ Editor de Dados: {len(df)} linhas × {len(df.columns)} colunas",
+                text_color="#2D8A4E"
             )
-            self.show_file_info("Editor de Dados", len(df), len(df.columns))
 
         DataEditorWindow(self, initial_df=self.current_data, on_use_data=_on_editor_data)
 
@@ -766,16 +578,26 @@ class HomePage(ctk.CTkFrame):
         self.file_history.add_file(file_path, file_type, rows, cols)
 
         self.import_status_label.configure(
-            text=f"✓ Arquivo carregado: {file_name}",
-            text_color="#4CAF50"
+            text=f"✓ {file_name}  ({rows} linhas × {cols} colunas)",
+            text_color="#2D8A4E"
         )
-        self.show_file_info(file_name, rows, cols)
+        self.spreadsheet.load_dataframe(data)
         self.show_loading(False)
 
         messagebox.showinfo(
             "Sucesso",
             f"Arquivo carregado com sucesso!\n\nLinhas: {rows}\nColunas: {cols}"
         )
+
+    def _on_spreadsheet_data_change(self, df: pd.DataFrame):
+        """Chamado sempre que o spreadsheet é editado diretamente."""
+        if df is not None and not df.empty:
+            self.current_data = df
+            r, c = df.shape
+            self.import_status_label.configure(
+                text=f"Tabela: {r} linhas × {c} colunas  (editado manualmente)",
+                text_color="#1f538d"
+            )
 
     def _on_file_error(self, error_msg: str):
         """Callback (na thread da UI) após erro de leitura"""
@@ -808,57 +630,11 @@ class HomePage(ctk.CTkFrame):
             self.import_csv_btn.configure(state="normal")
     
     def show_file_info(self, filename: str, rows: int, cols: int):
-        """
-        Mostra informações detalhadas do arquivo carregado
-        
-        Args:
-            filename: Nome do arquivo
-            rows: Número de linhas
-            cols: Número de colunas
-        """
-        # Remove info antiga se existir
-        for widget in self.file_info_frame.winfo_children():
-            widget.destroy()
-        
-        # Mostra o frame
-        self.file_info_frame.pack(side="right", padx=(10, 0))
-        
-        # Título
-        info_title = ctk.CTkLabel(
-            self.file_info_frame,
-            text="📊 Dados Carregados",
-            font=ctk.CTkFont(size=12, weight="bold")
+        """Atualiza o status de importação."""
+        self.import_status_label.configure(
+            text=f"✓ {filename}  ({rows} linhas × {cols} colunas)",
+            text_color="#2D8A4E"
         )
-        info_title.pack(padx=15, pady=(10, 5))
-        
-        # Nome do arquivo
-        name_label = ctk.CTkLabel(
-            self.file_info_frame,
-            text=filename,
-            font=ctk.CTkFont(size=11),
-            wraplength=200
-        )
-        name_label.pack(padx=15, pady=(0, 5))
-        
-        # Estatísticas
-        stats_frame = ctk.CTkFrame(self.file_info_frame, fg_color="transparent")
-        stats_frame.pack(padx=15, pady=(0, 10))
-        
-        rows_label = ctk.CTkLabel(
-            stats_frame,
-            text=f"📋 {rows} linhas",
-            font=ctk.CTkFont(size=10),
-            text_color="gray"
-        )
-        rows_label.pack()
-        
-        cols_label = ctk.CTkLabel(
-            stats_frame,
-            text=f"📊 {cols} colunas",
-            font=ctk.CTkFont(size=10),
-            text_color="gray"
-        )
-        cols_label.pack()
     
     def open_tool(self, feature_id: str):
         """
@@ -876,11 +652,6 @@ class HomePage(ctk.CTkFrame):
         if feature_id == 'stackup':
             from src.analytics.stack_up.stack_up_window import StackUpWindow
             StackUpWindow(self)
-            return
-
-        if feature_id == 'ishikawa':
-            from src.analytics.ishikawa.ishikawa_window import IshikawaDiagramWindow
-            IshikawaDiagramWindow(self)
             return
 
         if feature_id == 'sample_size_explorer':
@@ -907,20 +678,30 @@ class HomePage(ctk.CTkFrame):
             )
             return
         
+        # A tabela na tela é a fonte de verdade: sempre que tiver conteúdo,
+        # usa os dados/colunas que o usuário preencheu/editou nela
+        self.spreadsheet.commit_pending_edit()
+        sheet_df = self.spreadsheet.get_dataframe()
+        if not sheet_df.empty:
+            self.current_data = sheet_df
+
         # Check if there's any data available (current or historical)
         has_current_data = self.current_data is not None
         has_history = len(self.file_history.get_recent_files(count=1)) > 0
-        
+
         # If no current data and no history, show warning
         if not has_current_data and not has_history:
             response = messagebox.askyesno(
-                "Nenhum Arquivo Disponível",
-                "Você não tem nenhum arquivo carregado ou no histórico.\n\n"
+                "Nenhum Dado Disponível",
+                "Nenhum dado disponível.\n\n"
+                "Você pode:\n"
+                "• Importar um arquivo Excel ou CSV\n"
+                "• Colar dados do Excel com Ctrl+V na tabela\n"
+                "• Digitar dados diretamente na tabela\n\n"
                 "Deseja importar um arquivo agora?"
             )
             if response:
-                # Try to import a file
-                self.import_excel()  # or show a choice dialog
+                self.import_excel()
             return
         
         # Show data selection window
@@ -941,9 +722,6 @@ class HomePage(ctk.CTkFrame):
             elif feature_id == 'hypothesis_test':
                 from src.analytics.hypothesis_test.hypothesis_test_window import HypothesisTestWindow
                 hypothesis_window = HypothesisTestWindow(self, selected_data)
-            elif feature_id == 'descriptive_stats':
-                from src.analytics.descriptise_stats.descriptive_stats_window import DescriptiveStatsWindow
-                DescriptiveStatsWindow(self, selected_data)
             elif feature_id == 'distribution_test':
                 from src.analytics.distribution_test.distribution_test_window import DistributionTestWindow
                 DistributionTestWindow(self, selected_data)
@@ -1160,6 +938,10 @@ class HomePage(ctk.CTkFrame):
         try:
             if resize_optimizer.pending_call:
                 self.after_cancel(resize_optimizer.pending_call)
+        except Exception:
+            pass
+        try:
+            self.parent.config(menu="")
         except Exception:
             pass
         super().destroy()

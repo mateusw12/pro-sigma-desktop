@@ -21,7 +21,7 @@ class ProSigmaApp(ctk.CTk):
         # Configurações da janela principal
         self.title("Pro Sigma - Análise Estatística Six Sigma")
 
-        ctk.set_appearance_mode("dark")
+        ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
 
         self.resizable(True, True)

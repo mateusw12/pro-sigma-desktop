@@ -39,9 +39,9 @@ def create_horizontal_stats_table(parent_frame: ctk.CTkFrame,
     style = ttk.Style()
     style.theme_use("default")
     style.configure("Custom.Treeview",
-                   background="#2b2b2b",
-                   foreground="white",
-                   fieldbackground="#2b2b2b",
+                   background="white",
+                   foreground="#1a1a1a",
+                   fieldbackground="white",
                    borderwidth=0,
                    rowheight=30)
     style.configure("Custom.Treeview.Heading",
@@ -164,9 +164,9 @@ def create_minitab_style_table(parent_frame: ctk.CTkFrame,
     style = ttk.Style()
     style.theme_use("default")
     style.configure("Minitab.Treeview",
-                   background="#2b2b2b",
-                   foreground="white",
-                   fieldbackground="#2b2b2b",
+                   background="white",
+                   foreground="#1a1a1a",
+                   fieldbackground="white",
                    borderwidth=0,
                    rowheight=28)
     style.configure("Minitab.Treeview.Heading",
