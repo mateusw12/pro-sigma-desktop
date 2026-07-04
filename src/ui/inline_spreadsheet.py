@@ -43,6 +43,13 @@ class InlineSpreadsheet(ctk.CTkFrame):
         self._range_cols: tuple[int, int] | None = None
         self._drag_anchor: tuple[str, int] | None = None
 
+        # Alça de preenchimento (fill handle) — arrastar para continuar sequência/valores
+        self._fill_drag_active: bool = False
+        self._fill_source_rows: list | None = None
+        self._fill_source_cols: tuple | None = None
+        self._fill_axis: str | None = None      # "down" | "right" | None
+        self._fill_target_idx: int | None = None
+
         self._setup_style()
         self._setup_ui()
         self._setup_context_menu()
@@ -120,6 +127,12 @@ class InlineSpreadsheet(ctk.CTkFrame):
         self._hl_left = tk.Frame(self.tree, bg=accent)
         self._hl_right = tk.Frame(self.tree, bg=accent)
         self._hl_frames = (self._hl_top, self._hl_bottom, self._hl_left, self._hl_right)
+
+        # Alça de preenchimento (canto inferior-direito da célula/intervalo ativo)
+        self._fill_handle = tk.Frame(self.tree, bg=accent, cursor="crosshair")
+        self._fill_handle.bind("<Button-1>", self._on_fill_handle_press)
+        self._fill_handle.bind("<B1-Motion>", self._on_fill_handle_drag)
+        self._fill_handle.bind("<ButtonRelease-1>", self._on_fill_handle_release)
 
         self.tree.bind("<Configure>", lambda e: self._reposition_highlight(), add="+")
 
@@ -210,6 +223,8 @@ class InlineSpreadsheet(ctk.CTkFrame):
                              values=[str(pos)] + [""] * len(df.columns),
                              tags=(self._row_tag(pos),))
 
+        self._refresh_column_alignment()
+
     def get_dataframe(self) -> pd.DataFrame:
         """Retorna o conteúdo atual como DataFrame (ignora linhas vazias)."""
         if not self._col_names:
@@ -235,6 +250,15 @@ class InlineSpreadsheet(ctk.CTkFrame):
         for col in df.columns:
             try:
                 df[col] = pd.to_numeric(df[col], errors="raise")
+                continue
+            except (ValueError, TypeError):
+                pass
+            # Aceita vírgula como separador decimal (comum em pt-BR)
+            try:
+                df[col] = pd.to_numeric(
+                    df[col].astype(str).str.replace(",", ".", regex=False),
+                    errors="raise",
+                )
             except (ValueError, TypeError):
                 pass
         return df
@@ -330,10 +354,11 @@ class InlineSpreadsheet(ctk.CTkFrame):
 
         vals = list(self.tree.item(row_id, "values"))
         current = vals[col_idx - 1] if col_idx - 1 < len(vals) else ""
+        justify = "right" if (not current.strip() or self._is_number(current)) else "left"
 
         e = tk.Entry(self.tree, font=("Segoe UI", 9), relief="solid", bd=1,
                      highlightthickness=1, highlightcolor="#2E86DE",
-                     highlightbackground="#2E86DE")
+                     highlightbackground="#2E86DE", justify=justify)
         e.place(x=x, y=y, width=w, height=h)
         e.insert(0, current)
         e.select_range(0, "end")
@@ -787,6 +812,7 @@ class InlineSpreadsheet(ctk.CTkFrame):
         y_bottom = (bbox_bottom[1] + bbox_bottom[3]) if bbox_bottom else self.tree.winfo_height()
         h = max(0, y_bottom - y)
         self._place_highlight(x, y, w, h)
+        self._position_fill_handle(x, y, w, h)
 
     def _range_row_ids(self) -> list:
         """Retorna os iids das linhas cobertas pelo intervalo selecionado."""
@@ -798,6 +824,198 @@ class InlineSpreadsheet(ctk.CTkFrame):
             return []
         i0, i1 = children.index(row_top), children.index(row_bottom)
         return children[i0:i1 + 1]
+
+    # ── Alça de preenchimento (fill handle) ──────────────────────────────────
+
+    def _on_fill_handle_press(self, event):
+        if self._sel_mode not in ("cell", "range"):
+            return "break"
+        self._fill_drag_active = True
+        self._fill_axis = None
+        self._fill_target_idx = None
+
+        if self._sel_mode == "range" and self._range_rows and self._range_cols:
+            self._fill_source_rows = self._range_row_ids()
+            self._fill_source_cols = self._range_cols
+        elif self._active_row_id:
+            self._fill_source_rows = [self._active_row_id]
+            self._fill_source_cols = (self._active_col_idx, self._active_col_idx)
+        else:
+            self._fill_source_rows = None
+            self._fill_source_cols = None
+        return "break"
+
+    def _on_fill_handle_drag(self, event):
+        if not self._fill_drag_active or not self._fill_source_rows:
+            return "break"
+
+        tx = event.x_root - self.tree.winfo_rootx()
+        ty = event.y_root - self.tree.winfo_rooty()
+        row_id = self.tree.identify_row(ty)
+        children = list(self.tree.get_children())
+        if not row_id or row_id not in children:
+            return "break"
+
+        col = self.tree.identify_column(tx)
+        col_idx = None
+        if col:
+            try:
+                col_idx = int(col.replace("#", ""))
+            except ValueError:
+                col_idx = None
+
+        _, c1 = self._fill_source_cols
+        src_r1 = children.index(self._fill_source_rows[-1])
+        target_row_idx = children.index(row_id)
+
+        d_row = max(0, target_row_idx - src_r1)
+        d_col = max(0, (col_idx - c1)) if col_idx else 0
+
+        if d_row > 0 and d_row >= d_col:
+            self._fill_axis = "down"
+            self._fill_target_idx = target_row_idx
+        elif d_col > 0:
+            self._fill_axis = "right"
+            self._fill_target_idx = col_idx
+        else:
+            self._fill_axis = None
+            self._fill_target_idx = None
+
+        self._draw_fill_preview()
+        return "break"
+
+    def _on_fill_handle_release(self, event):
+        if self._fill_drag_active and self._fill_axis:
+            self._apply_fill()
+        else:
+            self._reposition_highlight()
+        self._fill_drag_active = False
+        self._fill_axis = None
+        self._fill_target_idx = None
+        return "break"
+
+    def _draw_fill_preview(self):
+        if not self._fill_axis or not self._fill_source_rows or not self._fill_source_cols:
+            self._reposition_highlight()
+            return
+
+        children = list(self.tree.get_children())
+        c0, c1 = self._fill_source_cols
+        src_r0 = children.index(self._fill_source_rows[0])
+        src_r1 = children.index(self._fill_source_rows[-1])
+
+        if self._fill_axis == "down":
+            top_row, bottom_row = children[src_r0], children[self._fill_target_idx]
+            left_col, right_col = c0, c1
+        else:
+            top_row, bottom_row = children[src_r0], children[src_r1]
+            left_col, right_col = c0, self._fill_target_idx
+
+        bbox_top = self.tree.bbox(top_row, f"#{left_col}")
+        bbox_bottom = self.tree.bbox(bottom_row, f"#{right_col}")
+        xb_left = bbox_top or self._any_visible_bbox(children, left_col)
+        xb_right = bbox_bottom or self._any_visible_bbox(children, right_col)
+        if not xb_left or not xb_right:
+            return
+
+        x = min(xb_left[0], xb_right[0])
+        w = max(xb_left[0] + xb_left[2], xb_right[0] + xb_right[2]) - x
+        y = bbox_top[1] if bbox_top else 0
+        y_bottom = (bbox_bottom[1] + bbox_bottom[3]) if bbox_bottom else self.tree.winfo_height()
+        h = max(0, y_bottom - y)
+        self._place_highlight(x, y, w, h)
+
+    def _apply_fill(self):
+        children = list(self.tree.get_children())
+        c0, c1 = self._fill_source_cols
+        src_r0 = children.index(self._fill_source_rows[0])
+        src_r1 = children.index(self._fill_source_rows[-1])
+
+        if self._fill_axis == "down":
+            target_r1 = self._fill_target_idx
+            missing = target_r1 - (len(children) - 1)
+            for _ in range(max(0, missing)):
+                self._append_empty_row()
+            children = list(self.tree.get_children())
+
+            for ci in range(c0, c1 + 1):
+                idx = ci - 1
+                src_values = []
+                for r in range(src_r0, src_r1 + 1):
+                    vals = list(self.tree.item(children[r], "values"))
+                    src_values.append(vals[idx] if idx < len(vals) else "")
+                filled = self._compute_fill_series(src_values, target_r1 - src_r1)
+                for offset, val in enumerate(filled):
+                    r = src_r1 + 1 + offset
+                    vals = list(self.tree.item(children[r], "values"))
+                    while len(vals) <= idx:
+                        vals.append("")
+                    vals[idx] = val
+                    self.tree.item(children[r], values=vals)
+
+            self._update_row_numbers()
+            new_rows = (children[src_r0], children[target_r1])
+            new_cols = (c0, c1)
+        else:
+            target_c1 = self._fill_target_idx
+            missing = target_c1 - (len(self._col_names) + 1)
+            for _ in range(max(0, missing)):
+                self._append_empty_col()
+            children = list(self.tree.get_children())   # iids mudam após rebuild de colunas
+
+            for r in range(src_r0, src_r1 + 1):
+                row_id = children[r]
+                vals = list(self.tree.item(row_id, "values"))
+                src_values = [vals[ci - 1] if ci - 1 < len(vals) else "" for ci in range(c0, c1 + 1)]
+                filled = self._compute_fill_series(src_values, target_c1 - c1)
+                for offset, val in enumerate(filled):
+                    idx = c1 + offset          # (c1+1+offset) - 1
+                    while len(vals) <= idx:
+                        vals.append("")
+                    vals[idx] = val
+                self.tree.item(row_id, values=vals)
+
+            new_rows = (children[src_r0], children[src_r1])
+            new_cols = (c0, target_c1)
+
+        self._notify_change()
+        self._set_range(new_rows[0], new_cols[0], new_rows[1], new_cols[1])
+
+    @staticmethod
+    def _compute_fill_series(values: list, count: int) -> list:
+        """Continua uma sequência (progressão aritmética) ou repete os valores/ciclo."""
+        if count <= 0:
+            return []
+        if not values:
+            return [""] * count
+        if len(values) == 1:
+            return [values[0]] * count
+
+        nums = []
+        all_numeric = True
+        for v in values:
+            try:
+                nums.append(float(str(v).replace(",", ".")))
+            except (ValueError, TypeError):
+                all_numeric = False
+                break
+
+        if all_numeric:
+            diffs = [nums[i + 1] - nums[i] for i in range(len(nums) - 1)]
+            if all(abs(d - diffs[0]) < 1e-9 for d in diffs):
+                step = diffs[0]
+                last = nums[-1]
+                all_int = all(float(n).is_integer() for n in nums)
+                result = []
+                for i in range(1, count + 1):
+                    val = last + step * i
+                    if all_int and float(val).is_integer():
+                        result.append(str(int(val)))
+                    else:
+                        result.append(str(val))
+                return result
+
+        return [values[i % len(values)] for i in range(count)]
 
     def _set_active(self, row_id: str, col_idx: int):
         self._sel_mode = "cell"
@@ -991,6 +1209,16 @@ class InlineSpreadsheet(ctk.CTkFrame):
     def _hide_highlight(self):
         for f in self._hl_frames:
             f.place_forget()
+        self._hide_fill_handle()
+
+    def _position_fill_handle(self, x: int, y: int, w: int, h: int):
+        size = 6
+        self._fill_handle.place(x=x + w - size // 2, y=y + h - size // 2,
+                                 width=size, height=size)
+        self._fill_handle.lift()
+
+    def _hide_fill_handle(self):
+        self._fill_handle.place_forget()
 
     def _highlight_cell(self, row_id: str, col_idx: int):
         bbox = self.tree.bbox(row_id, f"#{col_idx}")
@@ -999,6 +1227,7 @@ class InlineSpreadsheet(ctk.CTkFrame):
             return
         x, y, w, h = bbox
         self._place_highlight(x, y, w, h)
+        self._position_fill_handle(x, y, w, h)
 
     def _highlight_column(self, col_idx: int):
         children = self.tree.get_children()
@@ -1013,6 +1242,7 @@ class InlineSpreadsheet(ctk.CTkFrame):
         x, y0, w, _ = bbox
         height = max(0, self.tree.winfo_height() - y0)
         self._place_highlight(x, y0, w, height)
+        self._hide_fill_handle()
 
     def _reposition_highlight(self):
         if self._sel_mode == "cell" and self._active_row_id:
@@ -1064,14 +1294,36 @@ class InlineSpreadsheet(ctk.CTkFrame):
         self._range_rows = None
         self._range_cols = None
         self._drag_anchor = None
+        self._fill_drag_active = False
+        self._fill_source_rows = None
+        self._fill_source_cols = None
+        self._fill_axis = None
+        self._fill_target_idx = None
         self._hide_highlight()
 
     def _notify_change(self):
+        self._refresh_column_alignment()
         if self.on_data_change:
             try:
                 self.on_data_change(self.get_dataframe())
             except Exception:
                 pass
+
+    def _refresh_column_alignment(self):
+        """Alinha à direita colunas cujo conteúdo preenchido é todo numérico (estilo planilha)."""
+        for idx, name in enumerate(self._col_names):
+            has_value = False
+            numeric = True
+            for it in self.tree.get_children():
+                vals = list(self.tree.item(it, "values"))
+                v = vals[idx + 1] if idx + 1 < len(vals) else ""
+                if not str(v).strip():
+                    continue
+                has_value = True
+                if not self._is_number(v):
+                    numeric = False
+                    break
+            self.tree.column(name, anchor="e" if (has_value and numeric) else "w")
 
     @staticmethod
     def _is_number(s: str) -> bool:
