@@ -407,6 +407,7 @@ class InlineSpreadsheet(ctk.CTkFrame):
     def _abort_edit(self):
         if self._editing_entry and self._editing_entry.winfo_exists():
             self._editing_entry.destroy()
+            self.tree.focus_set()
         self._editing_entry = None
         self._editing_info  = None
 
@@ -1025,6 +1026,8 @@ class InlineSpreadsheet(ctk.CTkFrame):
         self.tree.focus(row_id)
         self.tree.see(row_id)
         self._highlight_cell(row_id, col_idx)
+        # Garante que o teclado volte para a tabela após fechar o campo de edição
+        self.tree.focus_set()
 
     def _active_row_index(self, children: list) -> int:
         if self._active_row_id and self._active_row_id in children:
